@@ -67,13 +67,23 @@ st.markdown(
         position:absolute; inset:0; overflow:hidden; pointer-events:none; user-select:none; z-index:1;
     }
     .hero-calligraphy {
-        position:absolute; right:2%; top:50%; transform:translateY(-52%) rotate(-1.2deg);
-        width:72%; max-width:860px; height:62%; display:flex; align-items:center; justify-content:center;
-        font-family:"Noto Naskh Arabic","Amiri",serif; direction:rtl;
-        font-size:clamp(3.3rem,7.4vw,7.4rem); line-height:1; white-space:nowrap;
+        position:absolute;
+        left:7.2%;
+        top:6%;
+        transform:rotate(-3deg);
+        width:min(58%, 760px);
+        height:auto;
+        display:block;
+        font-family:"Amiri","Noto Naskh Arabic",serif;
+        direction:rtl;
+        font-size:clamp(4.8rem,8vw,8.6rem);
+        font-weight:700;
+        line-height:1;
+        white-space:nowrap;
         color:rgba(215,182,107,.075);
-        text-shadow:0 0 28px rgba(215,182,107,.035);
-        letter-spacing:.025em;
+        text-shadow:0 3px 26px rgba(215,182,107,.045);
+        letter-spacing:.01em;
+        z-index:1;
     }
     .hero-calligraphy::before, .hero-calligraphy::after {
         content:""; position:absolute; top:50%; height:1px; width:18%;
@@ -339,7 +349,7 @@ st.markdown(
     """
     <div class="hero">
       <div class="hero-art" aria-hidden="true">
-        <div class="hero-calligraphy">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
+        <div class="hero-calligraphy">بِسْمِ اللَّهِ</div>
         <div class="hero-orbit"></div>
         <div class="hero-swoosh"></div>
       </div>
