@@ -1,10 +1,11 @@
 import html
 import json
+import re
+from urllib.parse import quote
 
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
-
 
 BASE_URL = "https://api.alquran.cloud/v1"
 
@@ -20,12 +21,12 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Amiri:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');
 
     :root {
         --bg: #07110e;
         --panel: rgba(255,255,255,.065);
-        --panel-strong: rgba(255,255,255,.095);
+        --panel-strong: rgba(255,255,255,.09);
         --border: rgba(255,255,255,.11);
         --text: #f5f7f6;
         --muted: #a8b3af;
@@ -36,62 +37,93 @@ st.markdown(
 
     html, body, [data-testid="stAppViewContainer"] {
         background:
-            radial-gradient(circle at 10% 0%, rgba(74, 190, 132, .12), transparent 28%),
-            radial-gradient(circle at 92% 8%, rgba(214, 179, 106, .10), transparent 24%),
+            radial-gradient(circle at 7% 0%, rgba(74,190,132,.12), transparent 28%),
+            radial-gradient(circle at 95% 7%, rgba(214,179,106,.09), transparent 24%),
             var(--bg);
         color: var(--text);
     }
 
+    [data-testid="stHeader"] {
+        background: rgba(7,17,14,.72);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+    }
+
     .block-container {
         max-width: 1180px;
-        padding-top: 2rem;
-        padding-bottom: 4rem;
+        padding-top: 1.6rem;
+        padding-bottom: 5rem;
     }
 
+    /* Hero: watermark is behind the content, never masking the title. */
     .hero {
         position: relative;
+        isolation: isolate;
         overflow: hidden;
-        padding: 2.2rem 2.4rem;
+        padding: 2.25rem 2.4rem;
         border: 1px solid var(--border);
-        border-radius: 28px;
-        background: linear-gradient(135deg, rgba(255,255,255,.09), rgba(255,255,255,.035));
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        box-shadow: 0 22px 70px rgba(0,0,0,.20);
-        margin-bottom: 1.2rem;
+        border-radius: 30px;
+        background: linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.03));
+        backdrop-filter: blur(22px);
+        -webkit-backdrop-filter: blur(22px);
+        box-shadow: 0 24px 80px rgba(0,0,0,.22);
+        margin-bottom: 1.15rem;
     }
 
-    .hero:after {
-        content: "﷽";
+    .hero::before {
+        content: "";
         position: absolute;
-        right: 2rem;
-        top: 0.7rem;
-        font-family: "Amiri", serif;
-        font-size: 5.5rem;
-        color: rgba(255,255,255,.055);
+        inset: 0;
+        background:
+            radial-gradient(circle at 82% 25%, rgba(103,215,160,.08), transparent 25%),
+            linear-gradient(115deg, transparent 40%, rgba(255,255,255,.025), transparent 70%);
+        z-index: -2;
         pointer-events: none;
     }
 
+    .hero::after {
+        content: "﷽";
+        position: absolute;
+        right: -1.5rem;
+        top: -.9rem;
+        font-family: "Amiri", serif;
+        font-size: clamp(4.5rem, 11vw, 8.2rem);
+        line-height: 1;
+        white-space: nowrap;
+        color: rgba(255,255,255,.026);
+        transform: rotate(-1deg);
+        z-index: -1;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    .hero > * {
+        position: relative;
+        z-index: 1;
+    }
+
     .eyebrow {
-        font-size: .78rem;
+        font-size: .76rem;
         letter-spacing: .16em;
         text-transform: uppercase;
         color: var(--accent);
-        font-weight: 700;
-        margin-bottom: .4rem;
+        font-weight: 800;
+        margin-bottom: .5rem;
     }
 
     .hero h1 {
         margin: 0;
-        font-size: clamp(2rem, 4vw, 3.3rem);
-        line-height: 1.05;
+        font-size: clamp(2.3rem, 4.5vw, 3.55rem);
+        line-height: 1;
+        letter-spacing: -.04em;
     }
 
     .hero p {
         color: var(--muted);
-        margin: .8rem 0 0;
-        max-width: 720px;
+        margin: .85rem 0 0;
+        max-width: 760px;
         font-size: 1rem;
+        line-height: 1.7;
     }
 
     .glass-card {
@@ -114,7 +146,8 @@ st.markdown(
 
     .surah-title {
         font-size: 1.55rem;
-        font-weight: 700;
+        font-weight: 800;
+        letter-spacing: -.02em;
     }
 
     .surah-sub {
@@ -127,14 +160,14 @@ st.markdown(
         border-radius: 22px;
         padding: 1.25rem 1.35rem;
         margin: .95rem 0;
-        background: rgba(255,255,255,.045);
-        transition: .2s ease;
+        background: rgba(255,255,255,.042);
+        transition: transform .2s ease, border-color .2s ease, background .2s ease;
     }
 
     .ayah-card:hover {
         transform: translateY(-1px);
         border-color: rgba(103,215,160,.24);
-        background: rgba(255,255,255,.065);
+        background: rgba(255,255,255,.06);
     }
 
     .ayah-num {
@@ -151,7 +184,7 @@ st.markdown(
     }
 
     .ayah-arabic {
-        font-family: "Amiri", serif;
+        font-family: "Amiri", "Noto Naskh Arabic", serif;
         direction: rtl;
         text-align: right;
         font-size: 2rem;
@@ -164,8 +197,8 @@ st.markdown(
         font-size: .76rem;
         letter-spacing: .08em;
         text-transform: uppercase;
-        font-weight: 700;
-        margin-top: .9rem;
+        font-weight: 800;
+        margin-top: .95rem;
         margin-bottom: .25rem;
     }
 
@@ -185,13 +218,8 @@ st.markdown(
     .source {
         color: #7f8b86;
         font-size: .78rem;
-        margin-top: 1.4rem;
+        margin-top: 1.35rem;
         text-align: center;
-    }
-
-    [data-testid="stSelectbox"] > div,
-    [data-testid="stRadio"] > div {
-        border-radius: 16px;
     }
 
     div[data-baseweb="select"] > div {
@@ -205,7 +233,7 @@ st.markdown(
         border: 1px solid rgba(103,215,160,.22);
         background: rgba(103,215,160,.11);
         color: #eafcf2;
-        font-weight: 600;
+        font-weight: 700;
     }
     </style>
     """,
@@ -220,7 +248,7 @@ def get_json(url: str, timeout: int = 20) -> dict:
     response = requests.get(
         url,
         timeout=timeout,
-        headers={"User-Agent": "Noor-Quran-App/1.0"},
+        headers={"User-Agent": "Noor-Quran-App/1.1"},
     )
     response.raise_for_status()
     data = response.json()
@@ -239,13 +267,54 @@ def get_surah_data(surah: int, edition: str):
     return get_json(f"{BASE_URL}/surah/{surah}/{edition}", 20)["data"]["ayahs"]
 
 
-@st.cache_data(ttl=60 * 60 * 24)
-def find_audio_edition(language: str):
-    data = get_json(
-        f"{BASE_URL}/edition?format=audio&language={language}",
-        15,
-    )["data"]
-    return data[0]["identifier"] if data else None
+def split_for_tts(text: str, max_chars: int = 175):
+    """Keep each remote TTS request short enough to be reliable."""
+    text = re.sub(r"\s+", " ", text or "").strip()
+    if not text:
+        return []
+    if len(text) <= max_chars:
+        return [text]
+
+    chunks = []
+    current = ""
+    # Prefer sentence/punctuation boundaries, then words.
+    pieces = re.split(r"(?<=[۔!?؛:])\s+", text)
+    if len(pieces) == 1:
+        pieces = text.split()
+
+    for piece in pieces:
+        if not piece:
+            continue
+        candidate = piece if not current else f"{current} {piece}"
+        if len(candidate) <= max_chars:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current)
+            if len(piece) <= max_chars:
+                current = piece
+            else:
+                words = piece.split()
+                current = ""
+                for word in words:
+                    candidate = word if not current else f"{current} {word}"
+                    if len(candidate) <= max_chars:
+                        current = candidate
+                    else:
+                        if current:
+                            chunks.append(current)
+                        current = word
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def google_tts_url(text: str, lang: str) -> str:
+    encoded = quote(text, safe="")
+    return (
+        "https://translate.google.com/translate_tts"
+        f"?ie=UTF-8&client=tw-ob&tl={lang}&q={encoded}"
+    )
 
 
 # ---------- Header ----------
@@ -255,11 +324,12 @@ st.markdown(
     <div class="hero">
         <div class="eyebrow">Read • Reflect • Listen</div>
         <h1>Noor</h1>
-        <p>A clean, distraction-free Quran experience with Arabic recitation and Urdu translation playback.</p>
+        <p>A clean, distraction-free Quran experience with Arabic recitation and spoken Urdu translation — verse by verse.</p>
     </div>
     """,
     unsafe_allow_html=True,
 )
+
 
 # ---------- Load surahs ----------
 
@@ -311,6 +381,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
 # ---------- Read mode ----------
 
 if mode == "📖 Read":
@@ -338,8 +409,8 @@ if mode == "📖 Read":
         st.stop()
 
     for i, ayah in enumerate(arabic_ayahs):
-        urdu_text = urdu_ayahs[i]["text"] if urdu_ayahs else None
-        english_text = english_ayahs[i]["text"] if english_ayahs else None
+        urdu_text = urdu_ayahs[i]["text"] if urdu_ayahs and i < len(urdu_ayahs) else None
+        english_text = english_ayahs[i]["text"] if english_ayahs and i < len(english_ayahs) else None
 
         card_parts = [
             '<div class="ayah-card">',
@@ -373,60 +444,51 @@ else:
     )
 
     try:
+        # Arabic recitation is always the authentic recorded audio.
         arabic_ayahs = get_surah_data(surah_number, "ar.alafasy")
     except Exception as exc:
         st.error("Arabic recitation load nahi hui.")
         st.caption(f"Technical detail: {exc}")
         st.stop()
 
-    translation_ayahs = None
     translation_language = None
+    translation_ayahs = None
 
     if playback_choice != "Arabic only":
         translation_language = "ur" if "Urdu" in playback_choice else "en"
-
+        translation_edition = "ur.jalandhry" if translation_language == "ur" else "en.sahih"
         try:
-            translation_edition = find_audio_edition(translation_language)
-        except Exception:
-            translation_edition = None
-
-        if translation_edition:
-            try:
-                translation_ayahs = get_surah_data(
-                    surah_number,
-                    translation_edition,
-                )
-            except Exception:
-                translation_ayahs = None
-
-    # Text is always loaded for the live browser translation feature.
-    if translation_ayahs is None and playback_choice != "Arabic only":
-        try:
-            text_edition = (
-                "ur.jalandhry"
-                if translation_language == "ur"
-                else "en.sahih"
-            )
-            translation_ayahs = get_surah_data(surah_number, text_edition)
+            translation_ayahs = get_surah_data(surah_number, translation_edition)
         except Exception as exc:
             st.warning("Translation text load nahi ho saki. Arabic recitation phir bhi chalegi.")
             st.caption(f"Technical detail: {exc}")
 
     tracks = []
     for i, ayah in enumerate(arabic_ayahs):
-        track = {
-            "audio": ayah["audio"],
-            "ayah": ayah["numberInSurah"],
-            "arabic": ayah["text"],
-            "translation": (
-                translation_ayahs[i]["text"]
-                if translation_ayahs and i < len(translation_ayahs)
-                else ""
-            ),
-        }
-        tracks.append(track)
+        translation_text = ""
+        if translation_ayahs and i < len(translation_ayahs):
+            translation_text = translation_ayahs[i].get("text", "")
+
+        # Build client-side TTS chunks lazily. No API key is required.
+        tts_chunks = []
+        if translation_language and translation_text:
+            tts_chunks = [
+                {"text": chunk, "url": google_tts_url(chunk, translation_language)}
+                for chunk in split_for_tts(translation_text)
+            ]
+
+        tracks.append(
+            {
+                "audio": ayah.get("audio", ""),
+                "ayah": ayah.get("numberInSurah", i + 1),
+                "arabic": ayah.get("text", ""),
+                "translation": translation_text,
+                "tts": tts_chunks,
+            }
+        )
 
     payload = json.dumps(tracks, ensure_ascii=False)
+    language_json = json.dumps(translation_language or "none")
 
     component_html = f"""
     <!doctype html>
@@ -449,6 +511,8 @@ else:
           -webkit-backdrop-filter: blur(18px);
           padding: 18px;
           box-shadow: 0 20px 55px rgba(0,0,0,.18);
+          position: relative;
+          overflow: visible;
         }}
         .topline {{
           display: flex;
@@ -458,15 +522,12 @@ else:
         }}
         .brand {{
           color: #67d7a0;
-          font-weight: 700;
+          font-weight: 800;
           font-size: 12px;
           letter-spacing: .12em;
           text-transform: uppercase;
         }}
-        .status {{
-          color: #9daaa5;
-          font-size: 12px;
-        }}
+        .status {{ color: #9daaa5; font-size: 12px; }}
         .verse {{
           font-family: "Amiri", "Noto Naskh Arabic", serif;
           direction: rtl;
@@ -483,20 +544,14 @@ else:
           line-height: 1.7;
           min-height: 24px;
         }}
-        .translation.en {{
-          direction: ltr;
-          text-align: left;
-        }}
-        .meta {{
-          color: #8c9893;
-          font-size: 12px;
-          margin-top: 8px;
-        }}
+        .translation.en {{ direction: ltr; text-align: left; }}
+        .meta {{ color: #8c9893; font-size: 12px; margin-top: 8px; }}
         .controls {{
           display: flex;
           align-items: center;
           gap: 10px;
           margin-top: 14px;
+          flex-wrap: wrap;
         }}
         button {{
           appearance: none;
@@ -505,7 +560,7 @@ else:
           color: #eafcf2;
           padding: 10px 15px;
           border-radius: 999px;
-          font-weight: 700;
+          font-weight: 800;
           cursor: pointer;
         }}
         button.secondary {{
@@ -524,36 +579,32 @@ else:
           height: 100%;
           width: 0%;
           background: linear-gradient(90deg, #67d7a0, #d6b36a);
-          transition: width .2s linear;
+          transition: width .18s linear;
         }}
-
-        /* Beautiful floating popup pill */
         .popup {{
           position: absolute;
           right: 18px;
-          bottom: 18px;
+          bottom: -18px;
           display: flex;
           align-items: center;
           gap: 9px;
           max-width: calc(100% - 36px);
           padding: 9px 13px;
           border-radius: 999px;
-          border: 1px solid rgba(255,255,255,.13);
-          background: rgba(12, 25, 21, .78);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          box-shadow: 0 12px 30px rgba(0,0,0,.25);
+          border: 1px solid rgba(255,255,255,.14);
+          background: rgba(10, 23, 19, .88);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+          box-shadow: 0 14px 36px rgba(0,0,0,.3);
           color: #ecf6f1;
           font-size: 12px;
           opacity: 0;
           transform: translateY(8px);
           pointer-events: none;
-          transition: .25s ease;
+          transition: opacity .25s ease, transform .25s ease;
+          z-index: 20;
         }}
-        .popup.show {{
-          opacity: 1;
-          transform: translateY(0);
-        }}
+        .popup.show {{ opacity: 1; transform: translateY(0); }}
         .dot {{
           width: 8px;
           height: 8px;
@@ -562,6 +613,7 @@ else:
           box-shadow: 0 0 14px rgba(103,215,160,.75);
           flex: 0 0 auto;
         }}
+        .small-note {{ color:#77847f; font-size:11px; margin-top:12px; }}
       </style>
     </head>
     <body>
@@ -573,7 +625,7 @@ else:
 
         <div class="verse" id="verse">Press Start to begin</div>
         <div class="translation" id="translation"></div>
-        <div class="meta" id="meta">Arabic recitation → translation</div>
+        <div class="meta" id="meta">Arabic recitation → spoken translation</div>
 
         <div class="controls">
           <button id="start">▶ Start</button>
@@ -582,6 +634,7 @@ else:
         </div>
 
         <div class="progress"><div class="bar" id="bar"></div></div>
+        <div class="small-note">Arabic recitation is followed automatically by a spoken translation of the same ayah.</div>
 
         <div class="popup" id="popup">
           <span class="dot"></span>
@@ -593,7 +646,7 @@ else:
 
       <script>
         const tracks = {payload};
-        const language = {json.dumps(translation_language or "none")};
+        const language = {language_json};
 
         const audio = document.getElementById("audio");
         const verse = document.getElementById("verse");
@@ -606,84 +659,38 @@ else:
 
         let index = 0;
         let running = false;
+        let phase = "arabic";
+        let ttsIndex = 0;
+        let ttsRequest = 0;
 
         function showPopup(message) {{
           popupText.textContent = message;
           popup.classList.add("show");
           clearTimeout(window.popupTimer);
-          window.popupTimer = setTimeout(() => popup.classList.remove("show"), 3600);
-        }}
-
-        function stopSpeech() {{
-          if ("speechSynthesis" in window) {{
-            speechSynthesis.cancel();
-          }}
-        }}
-
-        function speakTranslation(text) {{
-          if (!text || language === "none") {{
-            return;
-          }}
-
-          if (!("speechSynthesis" in window)) {{
-            showPopup("Browser Urdu/English speech is not supported");
-            return;
-          }}
-
-          stopSpeech();
-
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = language === "ur" ? "ur-PK" : "en-US";
-          utterance.rate = language === "ur" ? 0.9 : 0.95;
-          utterance.pitch = 1.0;
-          utterance.volume = 1.0;
-
-          const voices = speechSynthesis.getVoices();
-          const preferred = voices.find(v =>
-            v.lang.toLowerCase().startsWith(language === "ur" ? "ur" : "en")
-          );
-
-          if (preferred) {{
-            utterance.voice = preferred;
-          }}
-
-          showPopup(language === "ur" ? "Urdu translation" : "English translation");
-          meta.textContent = language === "ur"
-            ? "Arabic complete • speaking Urdu translation"
-            : "Arabic complete • speaking English translation";
-
-          utterance.onend = () => {{
-            index++;
-            playTrack();
-          }};
-
-          utterance.onerror = () => {{
-            index++;
-            playTrack();
-          }};
-
-          speechSynthesis.speak(utterance);
+          window.popupTimer = setTimeout(() => popup.classList.remove("show"), 4200);
         }}
 
         function updateUI(track) {{
           verse.textContent = track.arabic || "";
           translation.textContent = track.translation || "";
-          if (language === "en") {{
-            translation.classList.add("en");
-          }} else {{
-            translation.classList.remove("en");
-          }}
-
+          if (language === "en") translation.classList.add("en");
+          else translation.classList.remove("en");
           counter.textContent = `Ayah ${{track.ayah}} / ${{tracks.length}}`;
-          bar.style.width = `${{(index / Math.max(tracks.length, 1)) * 100}}%`;
-
-          showPopup(`Ayah ${{track.ayah}} • Arabic recitation`);
-          meta.textContent = language === "none"
-            ? "Arabic recitation"
-            : "Arabic recitation • translation follows automatically";
+          const base = (index / Math.max(tracks.length, 1)) * 100;
+          bar.style.width = `${{base}}%`;
         }}
 
-        function playTrack() {{
+        function resetAudio() {{
+          audio.pause();
+          audio.removeAttribute("src");
+          audio.load();
+        }}
+
+        function nextAyah() {{
+          if (!running) return;
+          index += 1;
+          ttsIndex = 0;
+          phase = "arabic";
           if (index >= tracks.length) {{
             running = false;
             counter.textContent = "Completed";
@@ -692,77 +699,131 @@ else:
             meta.textContent = "Alhamdulillah • Surah completed";
             return;
           }}
+          playArabic();
+        }}
 
+        function playArabic() {{
+          if (!running) return;
+          phase = "arabic";
           const track = tracks[index];
           updateUI(track);
+          resetAudio();
           audio.src = track.audio;
-          audio.currentTime = 0;
+          audio.load();
+          meta.textContent = language === "none"
+            ? "Arabic recitation"
+            : "Arabic recitation • Urdu meaning follows automatically";
+          showPopup(`Ayah ${{track.ayah}} • Arabic recitation`);
+          const p = audio.play();
+          if (p && p.catch) p.catch(() => showPopup("Press Start to allow audio playback"));
+        }}
+
+        function playTranslationChunk() {{
+          if (!running) return;
+          const track = tracks[index];
+          const chunks = track.tts || [];
+
+          if (language === "none" || !chunks.length) {{
+            nextAyah();
+            return;
+          }}
+
+          if (ttsIndex >= chunks.length) {{
+            nextAyah();
+            return;
+          }}
+
+          phase = "translation";
+          const requestId = ++ttsRequest;
+          const chunk = chunks[ttsIndex];
+          resetAudio();
+          audio.src = chunk.url;
+          audio.load();
+          meta.textContent = language === "ur"
+            ? "Arabic complete • speaking Urdu meaning"
+            : "Arabic complete • speaking English meaning";
+          showPopup(language === "ur" ? `Ayah ${{track.ayah}} • Urdu meaning` : `Ayah ${{track.ayah}} • English meaning`);
 
           const p = audio.play();
-          if (p && p.catch) {{
-            p.catch(() => showPopup("Press Start to allow audio playback"));
-          }}
+          if (p && p.catch) p.catch(() => {{
+            // Some browsers block remote TTS autoplay after a failed media load.
+            // Try the same request once more while the user gesture/session is active.
+            if (requestId === ttsRequest && running) {{
+              setTimeout(() => audio.play().catch(() => showPopup("Translation voice could not start")), 80);
+            }}
+          }});
         }}
 
         document.getElementById("start").addEventListener("click", () => {{
-          stopSpeech();
-          index = 0;
           running = true;
-          playTrack();
+          index = 0;
+          ttsIndex = 0;
+          ttsRequest++;
+          playArabic();
         }});
 
         document.getElementById("pause").addEventListener("click", () => {{
+          if (!running) return;
           if (!audio.paused) {{
             audio.pause();
-            stopSpeech();
             showPopup("Paused");
             meta.textContent = "Playback paused";
-          }} else if (running && audio.src) {{
-            audio.play();
-            showPopup("Resumed");
+          }} else {{
+            audio.play().then(() => showPopup(phase === "arabic" ? "Arabic resumed" : "Translation resumed")).catch(() => showPopup("Press Start to resume audio"));
           }}
         }});
 
         document.getElementById("stop").addEventListener("click", () => {{
           running = false;
-          audio.pause();
-          audio.currentTime = 0;
-          stopSpeech();
+          ttsRequest++;
+          resetAudio();
           index = 0;
+          ttsIndex = 0;
+          phase = "arabic";
           bar.style.width = "0%";
           counter.textContent = "Ready";
           verse.textContent = "Press Start to begin";
           translation.textContent = "";
-          meta.textContent = "Arabic recitation → translation";
+          meta.textContent = "Arabic recitation → spoken translation";
           popup.classList.remove("show");
         }});
 
         audio.addEventListener("timeupdate", () => {{
-          if (!audio.duration) return;
-          const start = (index / tracks.length) * 100;
-          const width = (audio.currentTime / audio.duration) * (100 / tracks.length);
-          bar.style.width = `${{Math.min(start + width, 100)}}%`;
+          if (!audio.duration || !tracks.length) return;
+          const completed = (index / tracks.length) * 100;
+          const inTrack = (audio.currentTime / audio.duration) * (100 / tracks.length);
+          bar.style.width = `${{Math.min(completed + inTrack, 100)}}%`;
         }});
 
         audio.addEventListener("ended", () => {{
           if (!running) return;
-          if (language === "none") {{
-            index++;
-            playTrack();
+          if (phase === "arabic") {{
+            ttsIndex = 0;
+            playTranslationChunk();
           }} else {{
-            speakTranslation(tracks[index].translation || "");
+            ttsIndex += 1;
+            playTranslationChunk();
           }}
         }});
 
-        window.speechSynthesis?.addEventListener?.("voiceschanged", () => {{}});
+        audio.addEventListener("error", () => {{
+          if (!running) return;
+          if (phase === "translation") {{
+            // Skip a failed TTS chunk rather than getting stuck.
+            ttsIndex += 1;
+            playTranslationChunk();
+          }} else {{
+            showPopup("Arabic audio could not load");
+          }}
+        }});
       </script>
     </body>
     </html>
     """
 
-    components.html(component_html, height=360)
+    components.html(component_html, height=410)
 
     st.markdown(
-        '<div class="source">Arabic recitation: Alafasy • Text & translation data: alquran.cloud API • Urdu/English voice uses your browser\'s built-in speech synthesis.</div>',
+        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken translation uses Google Translate TTS audio URLs and requires no API key.</div>',
         unsafe_allow_html=True,
     )
