@@ -62,6 +62,7 @@ st.markdown(
        ============================================================ */
     .hero {
         position:relative; isolation:isolate; overflow:hidden;
+        min-height:360px; display:flex; align-items:flex-end;
         padding:3.1rem 2.75rem 2.9rem; margin-bottom:1.6rem;
         border:1px solid rgba(255,255,255,.13); border-radius:36px;
         background:
@@ -91,26 +92,23 @@ st.markdown(
 
     .hero-art { position:absolute; inset:0; overflow:hidden; pointer-events:none; user-select:none; z-index:1; }
 
-    /* Full Bismillah — the actual focal calligraphy, gold gradient, legible weight */
+    /* Full Bismillah — now the dominant focal artwork, filling the hero as a
+       large luminous watermark behind the heading, gold-to-jade gradient. */
     .hero-calligraphy {
-        position:absolute; left:50%; top:-.35rem; transform:translateX(-50%) rotate(-.6deg);
-        width:96%; text-align:center; direction:rtl; white-space:nowrap;
+        position:absolute; left:50%; top:48%; transform:translate(-50%,-52%) rotate(-.4deg);
+        width:108%; text-align:center; direction:rtl; white-space:nowrap;
         font-family:"Aref Ruqaa","Amiri","Noto Naskh Arabic",serif; font-weight:700;
-        font-size:clamp(3.4rem,6.4vw,5.6rem); line-height:1;
-        background:linear-gradient(100deg, rgba(215,182,107,.5) 10%, rgba(238,214,158,.78) 42%, rgba(104,217,162,.42) 65%, rgba(215,182,107,.45) 92%);
+        font-size:clamp(5.2rem,12vw,10rem); line-height:1;
+        background:linear-gradient(100deg, rgba(215,182,107,.6) 8%, rgba(244,225,177,.95) 40%, rgba(104,217,162,.55) 66%, rgba(215,182,107,.6) 94%);
         -webkit-background-clip:text; background-clip:text; color:transparent;
-        filter:drop-shadow(0 6px 30px rgba(215,182,107,.14));
-        opacity:.9;
+        filter:drop-shadow(0 16px 60px rgba(215,182,107,.22));
+        opacity:.42;
     }
     .hero-calligraphy-sub {
-        position:absolute; left:50%; top:5.6rem; transform:translateX(-50%);
+        position:absolute; left:50%; bottom:1.15rem; transform:translateX(-50%);
         width:90%; text-align:center; direction:rtl; white-space:nowrap;
         font-family:"Amiri",serif; font-weight:400; font-size:clamp(1rem,1.7vw,1.35rem);
-        color:rgba(233,240,236,.24); letter-spacing:.02em;
-    }
-    .hero-calligraphy::after {
-        content:""; position:absolute; left:9%; right:9%; bottom:-14px; height:1px;
-        background:linear-gradient(90deg, transparent, rgba(215,182,107,.4) 50%, transparent);
+        color:rgba(233,240,236,.22); letter-spacing:.02em;
     }
     .hero-crescent {
         position:absolute; right:6.5%; top:12%; width:46px; height:46px; z-index:2;
@@ -297,19 +295,19 @@ def get_json(url: str, timeout: int = 25) -> dict:
 
 @st.cache_data(ttl=60 * 60 * 24, show_spinner=False)
 def get_surah_list() -> List[dict]:
-    return get_json(f"{BASE_URL}/surah", 15)["data"]
+    return get_json(f"{BASE_URL}/surah")["data"]
 
 
 @st.cache_data(ttl=60 * 60 * 24, show_spinner=False)
 def get_surah_data(surah: int, edition: str) -> List[dict]:
-    return get_json(f"{BASE_URL}/surah/{surah}/{edition}", 30)["data"]["ayahs"]
+    return get_json(f"{BASE_URL}/surah/{surah}/{edition}")["data"]["ayahs"]
 
 
 # -----------------------------------------------------------------------------
 # Free neural spoken translation — generated inside Streamlit, no backend/API key
 # -----------------------------------------------------------------------------
-URDU_VOICE = "ur-IN-SalmanNeural"
-URDU_VOICE_FALLBACK = "ur-PK-AsadNeural"
+URDU_VOICE = "ur-PK-AsadNeural"
+URDU_VOICE_FALLBACK = "ur-IN-SalmanNeural"
 URDU_RATE = "-10%"
 URDU_PITCH = "-1Hz"
 EN_VOICE = "en-US-GuyNeural"
@@ -336,32 +334,37 @@ def normalize_for_urdu_speech(text: str) -> str:
         "حضرت محمد": "حَضْرَت مُحَمَّد",
         "محمد ﷺ": "مُحَمَّد",
         "محمّد ﷺ": "مُحَمَّد",
-        # Allah: syllable-separated fallback spelling makes the long-aa sound
-        # explicit to Urdu TTS instead of relying on its lexical guess.
-        "اللہ تعالیٰ": "اَل لَاہُ تَعَالٰی",
-        "اللّٰہ تعالیٰ": "اَل لَاہُ تَعَالٰی",
-        "اللہ کے": "اَل لَاہ کے",
-        "اللہ کا": "اَل لَاہ کا",
-        "اللہ کی": "اَل لَاہ کی",
-        "اللہ سے": "اَل لَاہ سے",
-        "اللہ نے": "اَل لَاہ نے",
-        "اللہ کو": "اَل لَاہ کو",
-        "اللہ ہی": "اَل لَاہ ہی",
-        "رسول اللہ": "رَسُولُ اَل لَاہ",
-        "سبحان اللہ": "سُبْحَانَ اَل لَاہ",
+        # Allah: written as ONE unbroken word with a doubling shadda on the
+        # second lam and a plain (non-superscript) alif before the heh. The
+        # earlier version split "Al" and "laah" with a space, which made the
+        # voice read it as two separate words with a gap — that broken join,
+        # not the diacritics, was why it sounded wrong. A shadda + regular
+        # alif keeps it one fluid word and makes the long "aa" explicit.
+        "اللہ تعالیٰ": "اَللَّاہُ تَعَالٰی",
+        "اللّٰہ تعالیٰ": "اَللَّاہُ تَعَالٰی",
+        "اللہ کے": "اَللَّاہ کے",
+        "اللہ کا": "اَللَّاہ کا",
+        "اللہ کی": "اَللَّاہ کی",
+        "اللہ سے": "اَللَّاہ سے",
+        "اللہ نے": "اَللَّاہ نے",
+        "اللہ کو": "اَللَّاہ کو",
+        "اللہ ہی": "اَللَّاہ ہی",
+        "رسول اللہ": "رَسُولُ اَللَّاہ",
+        "سبحان اللہ": "سُبْحَانَ اَللَّاہ",
         "الحمدللہ": "اَلْحَمْدُ لِلّٰہ",
         "الحمد لله": "اَلْحَمْدُ لِلّٰہ",
-        "ان شاء اللہ": "اِنْ شَاءَ اَل لَاہ",
-        "انشاء اللہ": "اِنْ شَاءَ اَل لَاہ",
-        "ماشاء اللہ": "مَا شَاءَ اَل لَاہ",
-        "بسم اللہ": "بِسْمِ اَل لَاہ",
-        "اللّٰہ": "اَل لَاہ",
-        "اللّہ": "اَل لَاہ",
-        "اللہ": "اَل لَاہ",
-        "الله": "اَل لَاہ",
-        # Muhammad and related names.
-        "محمد": "مُ حَمَّد",
-        "محمّد": "مُ حَمَّد",
+        "ان شاء اللہ": "اِنْ شَاءَ اَللَّاہ",
+        "انشاء اللہ": "اِنْ شَاءَ اَللَّاہ",
+        "ماشاء اللہ": "مَا شَاءَ اَللَّاہ",
+        "بسم اللہ": "بِسْمِ اَللَّاہ",
+        "اللّٰہ": "اَللَّاہ",
+        "اللّہ": "اَللَّاہ",
+        "اللہ": "اَللَّاہ",
+        "الله": "اَللَّاہ",
+        # Muhammad — likewise kept as one unbroken word (no internal space),
+        # with a shadda on the doubled meem to mark the stressed syllable.
+        "محمد": "مُحَمَّد",
+        "محمّد": "مُحَمَّد",
         # Common sacred / Arabic-origin vocabulary with explicit long vowels.
         "تعالیٰ": "تَعَالٰی",
         "تعالی": "تَعَالٰی",
@@ -409,6 +412,14 @@ def normalize_for_urdu_speech(text: str) -> str:
     out = text.strip()
     for old_word in sorted(pronunciation, key=len, reverse=True):
         out = out.replace(old_word, pronunciation[old_word])
+
+    # Normalize the "dagger alif" (superscript alef, U+0670) to a plain alif.
+    # It's the correct Quranic spelling mark for a long "aa" vowel, but many
+    # Urdu TTS phonemizers don't expand it and instead clip or drop the vowel
+    # entirely — which is the main reason "aa"-sound words (Allah, ta'ala,
+    # rahman, etc.) were coming out short/flat even with diacritics added
+    # above. A regular alif is read reliably as the long vowel it represents.
+    out = out.replace("\u0670", "ا")
 
     # Deliberate pauses at Urdu sentence boundaries.
     for mark in ["۔", "؟", "!", "؛", ":"]:
