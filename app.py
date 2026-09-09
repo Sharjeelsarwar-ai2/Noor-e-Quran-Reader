@@ -476,8 +476,6 @@ st.markdown(
         <div class="hero-crescent"></div>
       </div>
       <div class="hero-content">
-        <div class="eyebrow">Read • Reflect • Listen</div>
-        <h1>Noor</h1>
         <p>A calm, distraction-free Quran experience with authentic Arabic recitation and a clearly spoken translation — verse by verse.</p>
       </div>
     </div>
