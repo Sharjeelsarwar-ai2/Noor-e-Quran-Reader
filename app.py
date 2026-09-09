@@ -1,11 +1,11 @@
+import asyncio
 import base64
 import html
-import io
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from gtts import gTTS
-
+import edge_tts
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
@@ -59,7 +59,7 @@ st.markdown(
 
     .block-container {
         max-width: 1180px;
-        padding-top: 1.15rem;
+        padding-top: 0.35rem;
         padding-bottom: 5rem;
     }
 
@@ -317,18 +317,63 @@ def split_for_tts(text: str, max_chars: int = 175):
     return chunks
 
 
-@st.cache_data(ttl=60 * 60 * 24 * 7, show_spinner=False)
+@st.cache_data(ttl=60 * 60 * 24 * 30, show_spinner=False)
 def make_tts_data_url(text: str, lang: str) -> str:
-    """Generate actual MP3 bytes server-side and return a self-contained data URL.
+    """Generate a calm neural spoken translation and cache it per ayah/chunk.
 
-    This avoids browser/remote-autoplay and old translate_tts endpoint problems.
+    Uses Microsoft Edge's free neural TTS endpoint through edge-tts.
+    No API key is required. Urdu uses a mature male Pakistan voice.
     """
     if not text:
         return ""
-    audio = io.BytesIO()
-    gTTS(text=text, lang=lang, slow=False).write_to_fp(audio)
-    encoded = base64.b64encode(audio.getvalue()).decode("ascii")
+
+    voice = "ur-PK-AsadNeural" if lang == "ur" else "en-US-GuyNeural"
+    rate = "-10%" if lang == "ur" else "-6%"
+    pitch = "-2Hz" if lang == "ur" else "-1Hz"
+
+    async def synthesize() -> bytes:
+        communicator = edge_tts.Communicate(
+            text=text,
+            voice=voice,
+            rate=rate,
+            pitch=pitch,
+        )
+        data = bytearray()
+        async for chunk in communicator.stream():
+            if chunk["type"] == "audio":
+                data.extend(chunk["data"])
+        return bytes(data)
+
+    audio_bytes = asyncio.run(synthesize())
+    if not audio_bytes:
+        return ""
+
+    encoded = base64.b64encode(audio_bytes).decode("ascii")
     return f"data:audio/mpeg;base64,{encoded}"
+
+
+def make_tts_batch(texts: list[str], lang: str, workers: int = 8) -> list[str]:
+    """Generate translation audio concurrently; cached items return immediately."""
+    if not texts:
+        return []
+
+    results = [""] * len(texts)
+    jobs = [(i, t) for i, t in enumerate(texts) if t]
+    if not jobs:
+        return results
+
+    with ThreadPoolExecutor(max_workers=min(workers, len(jobs))) as executor:
+        future_map = {
+            executor.submit(make_tts_data_url, text, lang): i
+            for i, text in jobs
+        }
+        for future in as_completed(future_map):
+            i = future_map[future]
+            try:
+                results[i] = future.result()
+            except Exception:
+                results[i] = ""
+    return results
 
 
 # ---------- Header ----------
@@ -477,35 +522,44 @@ else:
             st.warning("Translation text load nahi ho saki. Arabic recitation phir bhi chalegi.")
             st.caption(f"Technical detail: {exc}")
 
+    # Build all text tracks first. This is fast: only two API calls for a full Surah.
+    # Urdu/English voice is generated concurrently and cached per ayah/chunk.
+    translation_texts = []
+    for i, ayah in enumerate(arabic_ayahs):
+        text = ""
+        if translation_ayahs and i < len(translation_ayahs):
+            text = translation_ayahs[i].get("text", "")
+        translation_texts.append(text)
+
+    tts_by_ayah = [[] for _ in arabic_ayahs]
+    if translation_language and any(translation_texts):
+        chunk_records = []
+        for i, text in enumerate(translation_texts):
+            if not text:
+                continue
+            for chunk in split_for_tts(text):
+                chunk_records.append((i, chunk))
+
+        if chunk_records:
+            with st.spinner("Preparing translation voice…"):
+                urls = make_tts_batch(
+                    [chunk for _, chunk in chunk_records],
+                    translation_language,
+                    workers=10,
+                )
+            for (ayah_index, chunk), url in zip(chunk_records, urls):
+                if url:
+                    tts_by_ayah[ayah_index].append({"text": chunk, "url": url})
+
     tracks = []
     for i, ayah in enumerate(arabic_ayahs):
-        translation_text = ""
-        if translation_ayahs and i < len(translation_ayahs):
-            translation_text = translation_ayahs[i].get("text", "")
-
-        # Generate real spoken translation audio server-side.
-        # The browser then plays the resulting MP3 bytes in sequence.
-        tts_chunks = []
-        if translation_language and translation_text:
-            for chunk in split_for_tts(translation_text):
-                try:
-                    audio_url = make_tts_data_url(chunk, translation_language)
-                    if audio_url:
-                        tts_chunks.append({"text": chunk, "url": audio_url})
-                except Exception as exc:
-                    # Keep the Arabic recitation usable even if TTS generation fails.
-                    st.warning(
-                        f"{('Urdu' if translation_language == 'ur' else 'English')} voice could not be generated for Ayah {ayah.get('numberInSurah', i + 1)}."
-                    )
-                    break
-
         tracks.append(
             {
                 "audio": ayah.get("audio", ""),
                 "ayah": ayah.get("numberInSurah", i + 1),
                 "arabic": ayah.get("text", ""),
-                "translation": translation_text,
-                "tts": tts_chunks,
+                "translation": translation_texts[i],
+                "tts": tts_by_ayah[i],
             }
         )
 
@@ -656,7 +710,7 @@ else:
         </div>
 
         <div class="progress"><div class="bar" id="bar"></div></div>
-        <div class="small-note">Arabic recitation is followed automatically by a spoken translation of the same ayah.</div>
+        <div class="small-note">Arabic recitation is followed automatically by a calm male spoken translation of the same ayah.</div>
 
         <div class="popup" id="popup">
           <span class="dot"></span>
@@ -846,6 +900,6 @@ else:
     components.html(component_html, height=410)
 
     st.markdown(
-        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken translation audio is generated server-side.</div>',
+        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken translation: Edge neural TTS (cached per ayah).</div>',
         unsafe_allow_html=True,
     )
