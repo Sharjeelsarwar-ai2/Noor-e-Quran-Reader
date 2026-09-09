@@ -61,16 +61,49 @@ st.markdown(
         font-weight:800; margin-bottom:.5rem; }
     .hero h1 { margin:0; font-size:clamp(2.3rem,4.5vw,3.55rem); line-height:1; letter-spacing:-.04em; }
     .hero p { color:var(--muted); margin:.85rem 0 0; max-width:760px; font-size:1rem; line-height:1.7; }
-    .glass-card { border:1px solid var(--border); border-radius:24px; background:var(--panel);
+    .glass-card { position:relative; isolation:isolate; overflow:hidden; border:1px solid var(--border); border-radius:24px; background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.028));
         padding:1.2rem; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
-        box-shadow:0 14px 45px rgba(0,0,0,.14); }
+        box-shadow:0 14px 45px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.035); }
+    .glass-card::before { content:"۞"; position:absolute; left:-.15rem; top:-1rem; font-family:"Amiri","Noto Naskh Arabic",serif;
+        font-size:5.4rem; line-height:1; color:rgba(214,179,106,.034); transform:rotate(-10deg); pointer-events:none; z-index:-1; }
+    .glass-card::after { content:"﷽"; position:absolute; right:-2.1rem; bottom:-2.7rem; font-family:"Amiri","Noto Naskh Arabic",serif;
+        font-size:5rem; line-height:1; color:rgba(103,215,160,.026); transform:rotate(-3deg); pointer-events:none; z-index:-1; }
     .surah-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:.4rem 0 1rem; }
     .surah-title { font-size:1.55rem; font-weight:800; letter-spacing:-.02em; }
     .surah-sub { color:var(--muted); font-size:.9rem; }
-    .ayah-card { border:1px solid rgba(255,255,255,.09); border-radius:22px; padding:1.25rem 1.35rem;
-        margin:.95rem 0; background:rgba(255,255,255,.042); }
+
+    /* Enhanced Surah selector: more glass, softer glow, subtle Arabic ornament. */
+    .stSelectbox { position:relative; }
+    .stSelectbox::before { content:"۞"; position:absolute; left:14px; top:50%; transform:translateY(-51%); z-index:3;
+        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:1.05rem; color:rgba(214,179,106,.72);
+        pointer-events:none; text-shadow:0 0 14px rgba(214,179,106,.12); }
+    .stSelectbox::after { content:"القرآن"; position:absolute; right:42px; top:-1.05rem; z-index:3;
+        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:.92rem; color:rgba(214,179,106,.42);
+        pointer-events:none; letter-spacing:.02em; }
+    div[data-baseweb="select"] { filter:drop-shadow(0 14px 28px rgba(0,0,0,.12)); }
+    div[data-baseweb="select"] > div { min-height:58px; padding-left:2.2rem !important; padding-right:2.8rem !important;
+        background:linear-gradient(135deg,rgba(36,39,53,.94),rgba(28,30,42,.88)) !important;
+        border:1px solid rgba(255,255,255,.12) !important; border-radius:18px !important;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.055), 0 10px 28px rgba(0,0,0,.16) !important;
+        backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); transition:all .22s ease; }
+    div[data-baseweb="select"] > div:hover { border-color:rgba(103,215,160,.34) !important;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 0 0 1px rgba(103,215,160,.06), 0 14px 32px rgba(0,0,0,.18) !important;
+        transform:translateY(-1px); }
+    div[data-baseweb="select"] span { font-weight:650 !important; color:#f2f5f4 !important; }
+    div[data-baseweb="select"] svg { color:rgba(214,179,106,.9) !important; }
+    [data-baseweb="popover"] { background:rgba(17,25,22,.97) !important; border:1px solid rgba(255,255,255,.10) !important;
+        border-radius:18px !important; box-shadow:0 24px 60px rgba(0,0,0,.35) !important; backdrop-filter:blur(20px); }
+    [role="option"] { color:#e8efec !important; min-height:44px !important; }
+    [role="option"]:hover, [aria-selected="true"] { background:rgba(103,215,160,.09) !important; }
+
+    .ayah-card { position:relative; isolation:isolate; overflow:hidden; border:1px solid rgba(255,255,255,.09); border-radius:22px; padding:1.25rem 1.35rem;
+        margin:.95rem 0; background:linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.02));
+        backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:inset 0 1px 0 rgba(255,255,255,.025); }
+    .ayah-card::after { content:"۝"; position:absolute; left:-.15rem; bottom:-1.1rem; font-family:"Amiri","Noto Naskh Arabic",serif;
+        font-size:4.2rem; color:rgba(103,215,160,.024); transform:rotate(-12deg); pointer-events:none; z-index:-1; }
     .ayah-num { display:inline-flex; align-items:center; justify-content:center; min-width:31px; height:31px;
-        border-radius:50%; border:1px solid rgba(214,179,106,.35); color:var(--gold); font-size:.8rem; margin-bottom:.7rem; }
+        border-radius:50%; border:1px solid rgba(214,179,106,.35); color:var(--gold); font-size:.8rem; margin-bottom:.7rem;
+        background:rgba(214,179,106,.045); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }
     .ayah-arabic { font-family:"Amiri","Noto Naskh Arabic",serif; direction:rtl; text-align:right;
         font-size:2rem; line-height:2.05; color:#fbfcfb; }
     .translation-label { color:var(--accent); font-size:.76rem; letter-spacing:.08em;
@@ -78,7 +111,13 @@ st.markdown(
     .translation { color:#dce4e1; font-size:1rem; line-height:1.75; direction:rtl; text-align:right; }
     .translation.en { direction:ltr; text-align:left; }
     .source { color:#7f8b86; font-size:.78rem; margin-top:1.35rem; text-align:center; }
-    div[data-baseweb="select"] > div { background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.10); border-radius:16px; }
+
+    /* Give the mode / translation controls the same frosted-glass language. */
+    div[data-testid="stRadio"] > div { gap:.55rem; }
+    div[data-testid="stRadio"] label { border:1px solid rgba(255,255,255,.075); border-radius:999px;
+        padding:.48rem .78rem; background:rgba(255,255,255,.035); backdrop-filter:blur(12px);
+        transition:all .2s ease; }
+    div[data-testid="stRadio"] label:hover { border-color:rgba(103,215,160,.22); background:rgba(103,215,160,.045); }
     .stButton > button { border-radius:14px; border:1px solid rgba(103,215,160,.22);
         background:rgba(103,215,160,.11); color:#eafcf2; font-weight:700; }
     </style>
@@ -113,7 +152,7 @@ def get_surah_data(surah: int, edition: str) -> List[dict]:
 # Free neural spoken translation — generated inside Streamlit, no backend/API key
 # -----------------------------------------------------------------------------
 URDU_VOICE = "ur-PK-AsadNeural"
-URDU_RATE = "-12%"
+URDU_RATE = "-14%"
 URDU_PITCH = "-1Hz"
 EN_VOICE = "en-US-GuyNeural"
 EN_RATE = "-8%"
@@ -121,17 +160,65 @@ EN_PITCH = "-1Hz"
 
 
 def normalize_for_urdu_speech(text: str) -> str:
-    # Keep the meaning unchanged, but make punctuation/pause handling more natural.
-    replacements = {
-        "،": "، ",
-        "۔": "۔ ",
-        ":": ": ",
-        "؛": "؛ ",
-        "؟": "؟ ",
-        "  ": " ",
+    """Create a TTS-only pronunciation layer while keeping displayed Urdu intact."""
+    punctuation = {
+        "،": "، ", "۔": "۔ ", ":": ": ", "؛": "؛ ",
+        "؟": "؟ ", "!": "! ", "  ": " ",
     }
+
+    # Focused pronunciation hints for Arabic-origin words that Urdu neural TTS
+    # can flatten, especially long-aa/alif sounds. The on-screen translation
+    # is never changed; only the hidden TTS input uses these spellings.
+    pronunciation = {
+        "اللہ تعالیٰ": "اَللّٰہ تَعَالٰی",
+        "سبحان اللہ": "سُبْحَانَ اَللّٰہ",
+        "الحمدللہ": "اَلْحَمْدُ لِلّٰہ",
+        "ان شاء اللہ": "اِنْ شَاءَ اَللّٰہ",
+        "ماشاء اللہ": "مَا شَاءَ اَللّٰہ",
+        "بسم اللہ": "بِسْمِ اَللّٰہ",
+        "اللّٰہ": "اَللّٰہ",
+        "اللّہ": "اَللّٰہ",
+        "اللہ": "اَللّٰہ",
+        "الله": "اَللّٰه",
+        "تعالیٰ": "تَعَالٰی",
+        "تعالی": "تَعَالٰی",
+        "رحمن": "رَحْمٰن",
+        "رحیم": "رَحِیم",
+        "قرآن": "قُرْآن",
+        "قران": "قُرْآن",
+        "آخرت": "آخِرَت",
+        "قیامت": "قِیَامَت",
+        "رسول": "رَسُول",
+        "نبی": "نَبِی",
+        "انبیاء": "اَنْبِیَاء",
+        "محمد": "مُحَمَّد",
+        "مومن": "مُؤْمِن",
+        "مومنین": "مُؤْمِنِین",
+        "ایمان": "اِیمَان",
+        "اسلام": "اِسْلَام",
+        "الاسلام": "اَلْاِسْلَام",
+        "دعا": "دُعَاء",
+        "نماز": "نَمَاز",
+        "زکوٰۃ": "زَکٰوۃ",
+        "زکات": "زَکَات",
+        "جنت": "جَنَّت",
+        "جہنم": "جَہَنَّم",
+        "آسمان": "آسْمَان",
+        "آسمانوں": "آسْمَانوں",
+        "دنیا": "دُنْیَا",
+        "عذاب": "عَذَاب",
+        "ثواب": "ثَوَاب",
+        "کتاب": "کِتَاب",
+        "حساب": "حِسَاب",
+        "عالمین": "عَالَمِین",
+        "رحمت": "رَحْمَت",
+        "برکت": "بَرَکَت",
+    }
+
     out = text.strip()
-    for old, new in replacements.items():
+    for old_word in sorted(pronunciation, key=len, reverse=True):
+        out = out.replace(old_word, pronunciation[old_word])
+    for old, new in punctuation.items():
         out = out.replace(old, new)
     return " ".join(out.split())
 
