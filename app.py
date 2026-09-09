@@ -26,120 +26,168 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
 
     :root {
-        --bg:#07110e; --panel:rgba(255,255,255,.065); --border:rgba(255,255,255,.11);
-        --text:#f5f7f6; --muted:#a8b3af; --accent:#67d7a0; --gold:#d6b36a;
+        --bg:#06100d; --bg2:#091714; --panel:rgba(255,255,255,.055); --panel-strong:rgba(18,35,29,.72);
+        --border:rgba(255,255,255,.11); --border-soft:rgba(255,255,255,.075);
+        --text:#f7faf8; --muted:#a9b5b0; --accent:#68d9a2; --gold:#d7b66b;
     }
     html, body, [data-testid="stAppViewContainer"] {
         background:
-          radial-gradient(circle at 7% 0%, rgba(74,190,132,.12), transparent 28%),
-          radial-gradient(circle at 95% 7%, rgba(214,179,106,.09), transparent 24%), var(--bg);
+          radial-gradient(ellipse at 15% 0%, rgba(75,202,141,.12), transparent 30%),
+          radial-gradient(ellipse at 88% 6%, rgba(215,182,107,.085), transparent 28%),
+          linear-gradient(180deg, var(--bg2), var(--bg));
         color:var(--text);
     }
-    [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"],
-    #MainMenu, footer { display:none !important; visibility:hidden !important; }
-    .block-container { max-width:1180px; padding-top:.35rem; padding-bottom:5rem; }
+    [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], #MainMenu, footer {
+        display:none !important; visibility:hidden !important; height:0 !important;
+    }
+    .block-container { max-width:1180px; padding-top:.4rem; padding-bottom:5.5rem; }
 
-    .hero { position:relative; isolation:isolate; overflow:hidden; padding:2.25rem 2.4rem;
-        border:1px solid var(--border); border-radius:30px;
-        background:linear-gradient(135deg,rgba(255,255,255,.085),rgba(255,255,255,.03));
-        backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
-        box-shadow:0 24px 80px rgba(0,0,0,.22); margin-bottom:1.15rem; }
-    .hero::before { content:""; position:absolute; inset:0;
-        background:radial-gradient(circle at 82% 25%,rgba(103,215,160,.08),transparent 25%),
-        linear-gradient(115deg,transparent 40%,rgba(255,255,255,.025),transparent 70%);
-        z-index:-2; pointer-events:none; }
-    .hero::after { content:"﷽"; position:absolute; right:2.2rem; top:.35rem;
-        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:clamp(6rem,12vw,9.2rem);
-        line-height:1; white-space:nowrap; color:rgba(214,179,106,.095);
-        text-shadow:0 0 30px rgba(214,179,106,.045); z-index:1; pointer-events:none;
-        user-select:none; transform:rotate(-1deg); }
+    /* ---------------- HERO ---------------- */
+    .hero {
+        position:relative; isolation:isolate; overflow:hidden;
+        padding:2.45rem 2.55rem 2.55rem; margin-bottom:1.45rem;
+        border:1px solid rgba(255,255,255,.12); border-radius:32px;
+        background:
+          linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.028)),
+          radial-gradient(circle at 8% 8%, rgba(103,217,162,.08), transparent 30%);
+        backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+        box-shadow:0 26px 90px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.035);
+    }
+    .hero::before {
+        content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+        background:
+          radial-gradient(circle at 85% 28%, rgba(104,217,162,.10), transparent 24%),
+          linear-gradient(105deg, transparent 18%, rgba(255,255,255,.028) 50%, transparent 78%);
+    }
+    .hero-calligraphy {
+        position:absolute; right:2.4rem; top:.55rem; z-index:1;
+        font-family:"Amiri", "Noto Naskh Arabic", serif;
+        font-size:clamp(6.2rem,12vw,10rem); line-height:1; white-space:nowrap;
+        color:rgba(215,182,107,.085);
+        text-shadow:0 0 36px rgba(215,182,107,.035);
+        transform:rotate(-1.2deg); pointer-events:none; user-select:none;
+        filter:blur(.15px);
+    }
+    .hero-swoosh {
+        position:absolute; left:-5%; right:8%; bottom:4.5rem; height:2px; z-index:1;
+        background:linear-gradient(90deg, transparent, rgba(215,182,107,.15), rgba(215,182,107,.08), transparent);
+        transform:rotate(-1deg); pointer-events:none;
+    }
     .hero-content { position:relative; z-index:3; max-width:820px; }
-    .eyebrow { font-size:.76rem; letter-spacing:.16em; text-transform:uppercase; color:var(--accent);
-        font-weight:800; margin-bottom:.5rem; }
-    .hero h1 { margin:0; font-size:clamp(2.3rem,4.5vw,3.55rem); line-height:1; letter-spacing:-.04em; }
-    .hero p { color:var(--muted); margin:.85rem 0 0; max-width:760px; font-size:1rem; line-height:1.7; }
-    .glass-card { position:relative; isolation:isolate; overflow:hidden; z-index:0; border:1px solid var(--border); border-radius:24px; background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.028));
-        padding:1.2rem; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
-        box-shadow:0 14px 45px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.035); }
-    .glass-card::before { content:"۞"; position:absolute; left:-.15rem; top:-1rem; font-family:"Amiri","Noto Naskh Arabic",serif;
-        font-size:5.4rem; line-height:1; color:rgba(214,179,106,.034); transform:rotate(-10deg); pointer-events:none; z-index:-1; }
-    .glass-card::after { content:"﷽"; position:absolute; right:-2.1rem; bottom:-2.7rem; font-family:"Amiri","Noto Naskh Arabic",serif;
-        font-size:5rem; line-height:1; color:rgba(103,215,160,.026); transform:rotate(-3deg); pointer-events:none; z-index:-1; }
-    .surah-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:.4rem 0 1rem; }
-    .surah-title { font-size:1.55rem; font-weight:800; letter-spacing:-.02em; }
+    .eyebrow { font-size:.74rem; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:800; margin-bottom:.55rem; }
+    .hero h1 { margin:0; font-size:clamp(2.45rem,5vw,3.7rem); line-height:1; letter-spacing:-.045em; font-family:Inter,sans-serif; }
+    .hero p { color:var(--muted); margin:.95rem 0 0; max-width:780px; font-size:1rem; line-height:1.8; }
+
+    /* ---------------- GLASS CARDS ---------------- */
+    .glass-card {
+        position:relative; isolation:isolate; overflow:hidden; z-index:0;
+        border:1px solid var(--border); border-radius:26px; padding:1.25rem 1.35rem;
+        background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.025));
+        backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+        box-shadow:0 18px 50px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.035);
+    }
+    .glass-card::before {
+        content:"۞"; position:absolute; left:-.2rem; top:-1.15rem;
+        font-family:"Amiri",serif; font-size:5.4rem; line-height:1;
+        color:rgba(215,182,107,.03); transform:rotate(-10deg); pointer-events:none; z-index:0;
+    }
+    .glass-card::after {
+        content:"﷽"; position:absolute; right:-1.6rem; bottom:-2.1rem;
+        font-family:"Amiri",serif; font-size:5.3rem; line-height:1;
+        color:rgba(104,217,162,.024); transform:rotate(-3deg); pointer-events:none; z-index:0;
+    }
+    .surah-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:.25rem 0 1rem; }
+    .surah-title { font-size:1.55rem; font-weight:800; letter-spacing:-.025em; }
     .surah-sub { color:var(--muted); font-size:.9rem; }
+    .surah-number { color:var(--gold); font-family:"Cormorant Garamond",serif; font-weight:700; font-size:1.15rem; }
 
-    /* Enhanced Surah selector: full glass treatment + Arabic ornament. */
-    [data-testid="stSelectbox"] { position:relative; z-index:5; }
-    [data-testid="stSelectbox"]::before { content:"﷽"; position:absolute; right:18px; top:-17px;
-        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:1.05rem; line-height:1;
-        color:rgba(214,179,106,.72); pointer-events:none; z-index:8;
-        text-shadow:0 0 18px rgba(214,179,106,.16); }
-    [data-testid="stSelectbox"]::after { content:"۞  القرآن  ۞"; position:absolute; left:18px; bottom:-13px;
-        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:.78rem; line-height:1;
-        color:rgba(214,179,106,.38); letter-spacing:.04em; pointer-events:none; z-index:8; }
+    /* ---------------- SURAH SELECTOR ----------------
+       No floating pseudo-elements are used outside the select itself.
+       All Arabic decoration lives INSIDE the glass control. */
+    [data-testid="stSelectbox"] { position:relative; z-index:20; }
     [data-testid="stSelectbox"] label { display:none !important; }
-    div[data-baseweb="select"] { filter:drop-shadow(0 16px 30px rgba(0,0,0,.18)); }
-    div[data-baseweb="select"] > div { min-height:62px; padding:0 3rem 0 1.1rem !important;
+    [data-testid="stSelectbox"] [data-baseweb="select"] { width:100%; }
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        position:relative !important; min-height:64px; padding:0 4.4rem 0 3.35rem !important;
+        border:1px solid rgba(104,217,162,.20) !important; border-radius:21px !important;
         background:
-          radial-gradient(circle at 8% 50%, rgba(103,215,160,.10), transparent 28%),
-          linear-gradient(135deg, rgba(35,48,43,.86), rgba(18,28,25,.76)) !important;
-        border:1px solid rgba(255,255,255,.13) !important; border-radius:20px !important;
+          radial-gradient(circle at 14% 50%, rgba(104,217,162,.10), transparent 24%),
+          linear-gradient(135deg, rgba(27,48,40,.92), rgba(11,24,20,.88)) !important;
         box-shadow:
-          inset 0 1px 0 rgba(255,255,255,.07),
-          inset 0 0 0 1px rgba(103,215,160,.035),
-          0 12px 30px rgba(0,0,0,.18) !important;
-        backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
-        transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease; }
-    div[data-baseweb="select"] > div::before { content:""; position:absolute; inset:1px; border-radius:19px;
-        pointer-events:none; border:1px solid rgba(103,215,160,.05);
-        background:linear-gradient(110deg, transparent 0%, rgba(255,255,255,.025) 48%, transparent 70%); }
-    div[data-baseweb="select"] > div:hover { transform:translateY(-2px);
-        border-color:rgba(103,215,160,.34) !important;
-        background:
-          radial-gradient(circle at 8% 50%, rgba(103,215,160,.14), transparent 30%),
-          linear-gradient(135deg, rgba(40,57,50,.94), rgba(20,32,28,.86)) !important;
+          inset 0 1px 0 rgba(255,255,255,.08),
+          inset 0 0 0 1px rgba(215,182,107,.025),
+          0 15px 38px rgba(0,0,0,.22) !important;
+        backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+        transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div::before {
+        content:"۞"; position:absolute; left:1.05rem; top:50%; transform:translateY(-53%);
+        font-family:"Amiri",serif; font-size:1.5rem; color:rgba(215,182,107,.82);
+        pointer-events:none; z-index:5; text-shadow:0 0 18px rgba(215,182,107,.12);
+    }
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div::after {
+        content:"القرآن"; position:absolute; right:3.25rem; top:50%; transform:translateY(-54%);
+        font-family:"Amiri",serif; font-size:.95rem; color:rgba(215,182,107,.48);
+        pointer-events:none; z-index:5;
+    }
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover,
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
+        transform:translateY(-1px); border-color:rgba(104,217,162,.42) !important;
         box-shadow:
-          inset 0 1px 0 rgba(255,255,255,.09),
-          0 0 0 1px rgba(103,215,160,.07),
-          0 18px 40px rgba(0,0,0,.24),
-          0 0 28px rgba(103,215,160,.055) !important; }
-    div[data-baseweb="select"] span { font-weight:650 !important; color:#f4f7f5 !important; }
-    div[data-baseweb="select"] svg { color:rgba(214,179,106,.95) !important; width:20px; height:20px; }
-    [data-baseweb="popover"] { background:rgba(14,24,21,.975) !important; border:1px solid rgba(255,255,255,.11) !important;
-        border-radius:20px !important; box-shadow:0 26px 70px rgba(0,0,0,.42) !important;
-        backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); padding:5px !important; }
+          inset 0 1px 0 rgba(255,255,255,.095),
+          0 20px 44px rgba(0,0,0,.26),
+          0 0 28px rgba(104,217,162,.075) !important;
+    }
+    [data-testid="stSelectbox"] [data-baseweb="select"] span { color:#f4f8f6 !important; font-weight:650 !important; }
+    [data-testid="stSelectbox"] [data-baseweb="select"] svg { color:var(--gold) !important; width:21px; height:21px; }
+    [data-testid="stSelectbox"] [role="combobox"] { color:#f4f8f6 !important; }
+    [data-baseweb="popover"] {
+        background:rgba(10,23,19,.985) !important; border:1px solid rgba(104,217,162,.16) !important;
+        border-radius:20px !important; box-shadow:0 30px 80px rgba(0,0,0,.46) !important;
+        backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); padding:6px !important;
+    }
     [role="listbox"] { background:transparent !important; }
-    [role="option"] { color:#e8efec !important; min-height:48px !important; border-radius:13px !important; margin:2px 0 !important; }
-    [role="option"]:hover, [aria-selected="true"] { background:rgba(103,215,160,.11) !important; }
+    [role="option"] { color:#e8f0ec !important; min-height:48px !important; border-radius:12px !important; margin:2px 0 !important; }
+    [role="option"]:hover, [role="option"][aria-selected="true"] { background:rgba(104,217,162,.115) !important; }
 
-    .ayah-card { position:relative; isolation:isolate; overflow:hidden; border:1px solid rgba(255,255,255,.09); border-radius:22px; padding:1.25rem 1.35rem;
-        margin:.95rem 0; background:linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.02));
-        backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); box-shadow:inset 0 1px 0 rgba(255,255,255,.025); }
-    .ayah-card::after { content:"۝"; position:absolute; left:-.15rem; bottom:-1.1rem; font-family:"Amiri","Noto Naskh Arabic",serif;
-        font-size:4.2rem; color:rgba(103,215,160,.024); transform:rotate(-12deg); pointer-events:none; z-index:-1; }
-    .ayah-num { display:inline-flex; align-items:center; justify-content:center; min-width:31px; height:31px;
-        border-radius:50%; border:1px solid rgba(214,179,106,.35); color:var(--gold); font-size:.8rem; margin-bottom:.7rem;
-        background:rgba(214,179,106,.045); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }
-    .ayah-arabic { font-family:"Amiri","Noto Naskh Arabic",serif; direction:rtl; text-align:right;
-        font-size:2rem; line-height:2.05; color:#fbfcfb; }
-    .translation-label { color:var(--accent); font-size:.76rem; letter-spacing:.08em;
-        text-transform:uppercase; font-weight:800; margin-top:.95rem; margin-bottom:.25rem; }
-    .translation { color:#dce4e1; font-size:1rem; line-height:1.75; direction:rtl; text-align:right; }
+    /* ---------------- MODE CONTROLS ---------------- */
+    div[data-testid="stRadio"] > div { gap:.5rem; flex-wrap:wrap; }
+    div[data-testid="stRadio"] label {
+        position:relative; overflow:hidden; border:1px solid rgba(255,255,255,.08); border-radius:999px;
+        padding:.5rem .82rem; background:rgba(255,255,255,.032);
+        backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+        transition:all .2s ease;
+    }
+    div[data-testid="stRadio"] label::after {
+        content:"۝"; position:absolute; right:.38rem; bottom:-.62rem;
+        font-family:"Amiri",serif; font-size:1.75rem; color:rgba(215,182,107,.035); pointer-events:none;
+    }
+    div[data-testid="stRadio"] label:hover { border-color:rgba(104,217,162,.24); background:rgba(104,217,162,.048); transform:translateY(-1px); }
+
+    /* ---------------- AYAH CARDS ---------------- */
+    .ayah-card {
+        position:relative; isolation:isolate; overflow:hidden;
+        border:1px solid rgba(255,255,255,.085); border-radius:24px; padding:1.35rem 1.4rem; margin:.95rem 0;
+        background:linear-gradient(135deg,rgba(255,255,255,.048),rgba(255,255,255,.018));
+        backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+    }
+    .ayah-card::before { content:"۞"; position:absolute; right:-.5rem; top:-1rem; font-family:"Amiri",serif; font-size:4.2rem; color:rgba(215,182,107,.022); pointer-events:none; z-index:-1; }
+    .ayah-card::after { content:"﷽"; position:absolute; left:-1.2rem; bottom:-1.55rem; font-family:"Amiri",serif; font-size:4.3rem; color:rgba(104,217,162,.022); transform:rotate(-8deg); pointer-events:none; z-index:-1; }
+    .ayah-num {
+        display:inline-flex; align-items:center; justify-content:center; min-width:31px; height:31px;
+        border-radius:50%; border:1px solid rgba(215,182,107,.36); color:var(--gold); font-size:.8rem; margin-bottom:.75rem;
+        background:linear-gradient(135deg,rgba(215,182,107,.07),rgba(215,182,107,.02));
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .ayah-arabic { font-family:"Amiri","Noto Naskh Arabic",serif; direction:rtl; text-align:right; font-size:2rem; line-height:2.08; color:#fbfcfb; }
+    .translation-label { color:var(--accent); font-size:.74rem; letter-spacing:.1em; text-transform:uppercase; font-weight:800; margin-top:1rem; margin-bottom:.28rem; }
+    .translation { color:#dce5e1; font-size:1rem; line-height:1.78; direction:rtl; text-align:right; }
     .translation.en { direction:ltr; text-align:left; }
-    .source { color:#7f8b86; font-size:.78rem; margin-top:1.35rem; text-align:center; }
-
-    /* Give the mode / translation controls the same frosted-glass language. */
-    div[data-testid="stRadio"] > div { gap:.55rem; }
-    div[data-testid="stRadio"] label { border:1px solid rgba(255,255,255,.075); border-radius:999px;
-        padding:.48rem .78rem; background:rgba(255,255,255,.035); backdrop-filter:blur(12px);
-        transition:all .2s ease; }
-    div[data-testid="stRadio"] label:hover { border-color:rgba(103,215,160,.22); background:rgba(103,215,160,.045); }
-    .stButton > button { border-radius:14px; border:1px solid rgba(103,215,160,.22);
-        background:rgba(103,215,160,.11); color:#eafcf2; font-weight:700; }
+    .source { color:#7f8d87; font-size:.77rem; margin-top:1.35rem; text-align:center; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -275,6 +323,8 @@ def audio_data_url(audio_bytes: bytes) -> str:
 st.markdown(
     """
     <div class="hero">
+      <div class="hero-calligraphy" aria-hidden="true">﷽</div>
+      <div class="hero-swoosh" aria-hidden="true"></div>
       <div class="hero-content">
         <div class="eyebrow">Read • Reflect • Listen</div>
         <h1>Noor</h1>
