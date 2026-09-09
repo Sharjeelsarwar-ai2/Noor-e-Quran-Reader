@@ -51,9 +51,11 @@ st.markdown(
         background:radial-gradient(circle at 82% 25%,rgba(103,215,160,.08),transparent 25%),
         linear-gradient(115deg,transparent 40%,rgba(255,255,255,.025),transparent 70%);
         z-index:-2; pointer-events:none; }
-    .hero::after { content:""; position:absolute; right:-1.5rem; top:1rem;
-        font-family:"Amiri",serif; font-size:clamp(4.2rem,10vw,7.2rem); line-height:1;
-        color:rgba(255,255,255,.018); z-index:-1; pointer-events:none; }
+    .hero::after { content:"﷽"; position:absolute; right:-1.5rem; top:.6rem;
+        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:clamp(5rem,11vw,8.4rem);
+        line-height:1; white-space:nowrap; color:rgba(214,179,106,.075);
+        text-shadow:0 0 28px rgba(214,179,106,.04); z-index:-1; pointer-events:none;
+        user-select:none; transform:rotate(-1deg); }
     .hero-content { position:relative; z-index:2; max-width:820px; }
     .eyebrow { font-size:.76rem; letter-spacing:.16em; text-transform:uppercase; color:var(--accent);
         font-weight:800; margin-bottom:.5rem; }
