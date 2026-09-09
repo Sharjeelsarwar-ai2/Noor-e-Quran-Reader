@@ -5,7 +5,6 @@ import io
 import json
 import os
 import re
-import time
 from typing import Dict, List, Optional
 
 import edge_tts
@@ -366,6 +365,7 @@ SACRED_ARABIC_TERMS = sorted(
         "ایمان",
         "کتاب",
         "آسمان",
+        "یا",
     ],
     key=len,
     reverse=True,
@@ -425,23 +425,13 @@ async def _synthesize_once(text: str, voice: str, rate: str, pitch: str) -> byte
     return data
 
 
-def _synthesize_with_fallback(text: str, voices: List[str], rate: str, pitch: str, attempts_per_voice: int = 3) -> bytes:
-    # "No audio was received" from edge-tts is almost always a transient
-    # network/rate-limit hiccup, not a real problem with the text — it shows
-    # up more often now that a translation gets split into several separate
-    # synthesis calls per ayah (one per Urdu run, one per Arabic-origin term).
-    # Retrying the same voice a couple of times with a short backoff clears
-    # it in the large majority of cases, before ever falling back to a
-    # different voice or giving up.
+def _synthesize_with_fallback(text: str, voices: List[str], rate: str, pitch: str) -> bytes:
     last_error: Optional[Exception] = None
     for voice in voices:
-        for attempt in range(attempts_per_voice):
-            try:
-                return asyncio.run(_synthesize_once(text, voice, rate, pitch))
-            except Exception as exc:
-                last_error = exc
-                if attempt < attempts_per_voice - 1:
-                    time.sleep(0.6 * (attempt + 1))
+        try:
+            return asyncio.run(_synthesize_once(text, voice, rate, pitch))
+        except Exception as exc:
+            last_error = exc
     raise RuntimeError(f"TTS failed for all configured voices: {last_error}")
 
 
