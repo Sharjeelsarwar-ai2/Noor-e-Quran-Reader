@@ -364,6 +364,8 @@ SACRED_ARABIC_TERMS = sorted(
         "قران",
         "ایمان",
         "کتاب",
+        "آسمان",
+        "یا",
     ],
     key=len,
     reverse=True,
@@ -475,6 +477,7 @@ st.markdown(
       </div>
       <div class="hero-content">
         <div class="eyebrow">Read • Reflect • Listen</div>
+        <h1>Noor</h1>
         <p>A calm, distraction-free Quran experience with authentic Arabic recitation and a clearly spoken translation — verse by verse.</p>
       </div>
     </div>
