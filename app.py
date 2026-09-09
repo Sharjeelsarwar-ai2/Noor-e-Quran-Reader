@@ -4,6 +4,7 @@ import html
 import io
 import json
 import os
+import re
 from typing import Dict, List, Optional
 
 import edge_tts
@@ -306,41 +307,83 @@ def get_surah_data(surah: int, edition: str) -> List[dict]:
 # -----------------------------------------------------------------------------
 # Free neural spoken translation — generated inside Streamlit, no backend/API key
 # -----------------------------------------------------------------------------
+# edge-tts ships exactly four Urdu voices (ur-IN-SalmanNeural, ur-IN-GulNeural,
+# ur-PK-AsadNeural, ur-PK-UzmaNeural) and, as of edge-tts 5+, Microsoft removed
+# support for custom SSML — so there is no way to ask a single Urdu voice to
+# pronounce one embedded word using different phonetics. No Urdu voice reliably
+# nails Arabic-origin sacred proper nouns like اللہ, محمد and قرآن, because
+# they're genuinely Arabic words, not Urdu ones.
+#
+# The real fix: synthesize those specific words/phrases with an actual Arabic
+# voice, and everything else with the Urdu voice, then stitch the audio
+# together. That is the only way to get correct pronunciation for the sacred
+# terms without breaking the natural, correct Urdu pronunciation everything
+# else already has.
 URDU_VOICE = "ur-PK-AsadNeural"
 URDU_VOICE_FALLBACK = "ur-IN-SalmanNeural"
 URDU_RATE = "-10%"
 URDU_PITCH = "-1Hz"
+ARABIC_VOICE = "ar-SA-HamedNeural"
+ARABIC_VOICE_FALLBACK = "ar-EG-ShakirNeural"
+ARABIC_RATE = "-8%"
+ARABIC_PITCH = "-1Hz"
 EN_VOICE = "en-US-GuyNeural"
 EN_RATE = "-8%"
 EN_PITCH = "-1Hz"
+
+# Arabic-origin sacred proper nouns / phrases, longest first so the regex
+# below prefers the fuller phrase (e.g. "اللہ تعالیٰ" over bare "اللہ").
+SACRED_ARABIC_TERMS = sorted(
+    [
+        "صلی اللہ علیہ وآلہ وسلم",
+        "صلی اللہ علیہ وسلم",
+        "رسول اللہ",
+        "سبحان اللہ",
+        "الحمد للہ",
+        "ان شاء اللہ",
+        "انشاء اللہ",
+        "ماشاء اللہ",
+        "استغفر اللہ",
+        "بسم اللہ",
+        "اللہ تعالیٰ",
+        "اللہ تعالی",
+        "اللہ کے",
+        "اللہ کا",
+        "اللہ کی",
+        "اللہ سے",
+        "اللہ نے",
+        "اللہ کو",
+        "اللہ ہی",
+        "اللہ",
+        "الله",
+        "محمد مصطفیٰ",
+        "محمد مصطفی",
+        "حضرت محمد",
+        "محمد",
+        "قرآن",
+        "قران",
+        "ایمان",
+        "کتاب",
+    ],
+    key=len,
+    reverse=True,
+)
+_SACRED_PATTERN = re.compile("(" + "|".join(re.escape(t) for t in SACRED_ARABIC_TERMS) + ")")
 
 
 def normalize_for_urdu_speech(text: str) -> str:
     """Create a TTS-only pronunciation layer while keeping displayed Urdu intact.
 
     The visible translation is never changed here — only the hidden copy sent
-    to the speech engine.
-
-    An earlier version of this function added Arabic harakat (the small
-    Quranic vowel/gemination marks) to words like اللہ, محمد, ایمان and
-    کتاب, hoping to spell out the long "aa" sound explicitly. That turned out
-    to be the actual cause of the bad pronunciation, not the fix for it: this
-    voice — like almost every Urdu neural voice — is trained on ordinary,
-    undiacritized Urdu text. اللہ, محمد, ایمان and کتاب are already spelled
-    completely unambiguously in plain Urdu (اللہ already contains two lams;
-    ایمان and کتاب already contain the alif that makes their "aa" sound).
-    Layering combining vowel marks onto them pushed the text outside anything
-    the model was trained on, so it fell back to a much worse letter-by-letter
-    guess. So this function now leaves ordinary words alone and only touches
-    the couple of things that have no sound of their own as written.
+    to the speech engine. This only expands things that have no pronunciation
+    of their own as written (the ﷺ glyph) and splits a couple of run-together
+    spellings so word-boundary detection doesn't stumble. Ordinary words are
+    left completely untouched, since they're already spelled unambiguously in
+    plain Urdu.
     """
     replacements = {
-        # ﷺ / ﷻ are typographic glyphs with no pronunciation — expand them to
-        # the plain phrase they stand for, spelled normally (no diacritics).
         "ﷺ": "صلی اللہ علیہ وسلم",
         "ﷻ": "سبحانہ وتعالی",
-        # Run-together spellings can confuse word-boundary detection — split
-        # them into their normal, separately-spelled words (still no diacritics).
         "الحمدللہ": "الحمد للہ",
         "ماشاءاللہ": "ماشاء اللہ",
         "انشاءاللہ": "انشاء اللہ",
@@ -351,11 +394,8 @@ def normalize_for_urdu_speech(text: str) -> str:
     for old, new in replacements.items():
         out = out.replace(old, new)
 
-    # Normalize the rare "dagger alif" (superscript alef, U+0670) — sometimes
-    # present in Quranic-style spellings such as تعالیٰ — to a plain alif.
-    # This voice's text front-end doesn't reliably expand that mark, so
-    # swapping it for the ordinary letter keeps the long vowel it represents
-    # without introducing an unfamiliar combining character.
+    # Normalize the rare "dagger alif" (superscript alef, U+0670) to a plain
+    # alif, since this voice's text front-end doesn't reliably expand it.
     out = out.replace("\u0670", "ا")
 
     # Deliberate pauses at Urdu sentence boundaries.
@@ -365,37 +405,56 @@ def normalize_for_urdu_speech(text: str) -> str:
     return " ".join(out.split())
 
 
+def split_mixed_voice_segments(text: str) -> List[tuple]:
+    """Split normalized Urdu text into ordered (segment, is_sacred_arabic) runs."""
+    parts = [p for p in _SACRED_PATTERN.split(text) if p]
+    return [(p, bool(_SACRED_PATTERN.fullmatch(p))) for p in parts]
+
+
+async def _synthesize_once(text: str, voice: str, rate: str, pitch: str) -> bytes:
+    communicate = edge_tts.Communicate(text, voice=voice, rate=rate, pitch=pitch)
+    buf = io.BytesIO()
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            buf.write(chunk["data"])
+    data = buf.getvalue()
+    if not data:
+        raise RuntimeError(f"No audio returned by {voice}")
+    return data
+
+
+def _synthesize_with_fallback(text: str, voices: List[str], rate: str, pitch: str) -> bytes:
+    last_error: Optional[Exception] = None
+    for voice in voices:
+        try:
+            return asyncio.run(_synthesize_once(text, voice, rate, pitch))
+        except Exception as exc:
+            last_error = exc
+    raise RuntimeError(f"TTS failed for all configured voices: {last_error}")
+
+
 @st.cache_data(ttl=60 * 60 * 24 * 30, show_spinner=False)
 def synthesize_tts(text: str, language: str) -> bytes:
     if not text.strip():
         return b""
 
-    if language == "ur":
-        text = normalize_for_urdu_speech(text)
-        voices = [URDU_VOICE, URDU_VOICE_FALLBACK]
-        rate, pitch = URDU_RATE, URDU_PITCH
-    else:
-        voices = [EN_VOICE]
-        rate, pitch = EN_RATE, EN_PITCH
+    if language != "ur":
+        return _synthesize_with_fallback(text, [EN_VOICE], EN_RATE, EN_PITCH)
 
-    async def _run(voice: str) -> bytes:
-        communicate = edge_tts.Communicate(text, voice=voice, rate=rate, pitch=pitch)
-        buf = io.BytesIO()
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                buf.write(chunk["data"])
-        data = buf.getvalue()
-        if not data:
-            raise RuntimeError(f"No audio returned by {voice}")
-        return data
-
-    last_error = None
-    for voice in voices:
-        try:
-            return asyncio.run(_run(voice))
-        except Exception as exc:
-            last_error = exc
-    raise RuntimeError(f"TTS failed for all configured voices: {last_error}")
+    normalized = normalize_for_urdu_speech(text)
+    audio_chunks = []
+    for segment, is_sacred in split_mixed_voice_segments(normalized):
+        if not segment.strip():
+            continue
+        if is_sacred:
+            audio_chunks.append(
+                _synthesize_with_fallback(segment, [ARABIC_VOICE, ARABIC_VOICE_FALLBACK], ARABIC_RATE, ARABIC_PITCH)
+            )
+        else:
+            audio_chunks.append(
+                _synthesize_with_fallback(segment, [URDU_VOICE, URDU_VOICE_FALLBACK], URDU_RATE, URDU_PITCH)
+            )
+    return b"".join(audio_chunks)
 
 
 def audio_data_url(audio_bytes: bytes) -> str:
@@ -416,7 +475,6 @@ st.markdown(
       </div>
       <div class="hero-content">
         <div class="eyebrow">Read • Reflect • Listen</div>
-        <h1>Noor</h1>
         <p>A calm, distraction-free Quran experience with authentic Arabic recitation and a clearly spoken translation — verse by verse.</p>
       </div>
     </div>
@@ -606,7 +664,7 @@ else:
           <button id="stop" class="secondary">■ Stop</button>
         </div>
         <div class="progress"><div class="bar" id="bar"></div></div>
-        <div class="note">The translation is a spoken meaning, not Quranic recitation. It is delivered in a calm, neutral male Urdu voice.</div>
+        <div class="note">The translation is a spoken meaning, not Quranic recitation. It is delivered in a calm male Urdu voice, with Arabic-origin sacred words read in a native Arabic voice for accurate pronunciation.</div>
         <div class="popup" id="popup"><span class="dot"></span><span id="popupText">Now playing</span></div>
       </div>
       <audio id="audio" preload="auto"></audio>
@@ -776,6 +834,6 @@ else:
     # Extra height prevents the floating pill from being clipped.
     components.html(player_html, height=415)
     st.markdown(
-        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken meaning: free Edge neural TTS • calm male Urdu voice with pronunciation guidance.</div>',
+        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken meaning: free Edge neural TTS • Urdu voice, with sacred Arabic-origin terms voiced in Arabic.</div>',
         unsafe_allow_html=True,
     )
