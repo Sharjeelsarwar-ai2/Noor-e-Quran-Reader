@@ -26,7 +26,7 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
 
     :root {
         --bg:#06100d; --bg2:#091714; --panel:rgba(255,255,255,.055); --panel-strong:rgba(18,35,29,.72);
@@ -62,54 +62,57 @@ st.markdown(
           radial-gradient(circle at 85% 28%, rgba(104,217,162,.10), transparent 24%),
           linear-gradient(105deg, transparent 18%, rgba(255,255,255,.028) 50%, transparent 78%);
     }
-    /* Contained calligraphy artwork: everything is clipped INSIDE the hero. */
+    /* ---------------- HERO CALLIGRAPHY ----------------
+       Bismillah is a contained decorative layer behind the Noor wordmark.
+       Nothing is allowed to escape the hero box. */
     .hero-art {
         position:absolute; inset:0; overflow:hidden; pointer-events:none; user-select:none; z-index:1;
     }
-    /* The original Noor look: one elegant Bismillah phrase sits behind the title.
-       It is deliberately kept fully inside the hero bounds so no glyph can leak
-       into the page gap or be clipped by the viewport. */
+    /* Long ornamental Bismillah: one contained, wide calligraphic ribbon spanning the hero. */
     .hero-calligraphy {
         position:absolute;
-        left:2.0rem;
-        top:1.15rem;
-        width:72%;
-        max-width:780px;
-        height:auto;
-        display:block;
-        font-family:"Amiri","Noto Naskh Arabic",serif;
+        left:4%;
+        top:-.25rem;
+        width:92%;
+        height:185px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        overflow:visible;
+        padding:0;
+        font-family:"Aref Ruqaa","Aref Ruqaa Ink","Amiri","Noto Naskh Arabic",serif;
         direction:rtl;
-        text-align:left;
-        font-size:clamp(3.8rem,6.8vw,7.1rem);
+        text-align:center;
+        font-size:clamp(4.8rem,7.2vw,7.4rem);
         font-weight:700;
-        line-height:.95;
+        line-height:1;
         white-space:nowrap;
         color:rgba(215,182,107,.125);
-        text-shadow:0 6px 34px rgba(215,182,107,.075);
-        letter-spacing:0;
-        transform:rotate(-3deg);
-        transform-origin:left top;
+        text-shadow:0 8px 32px rgba(215,182,107,.075);
+        letter-spacing:.02em;
+        transform:rotate(-1.4deg);
+        transform-origin:center center;
         z-index:1;
-        opacity:.92;
     }
-    .hero-calligraphy::before {
+    .hero-calligraphy::after {
         content:"";
         position:absolute;
-        left:1.5%;
-        right:3%;
-        bottom:-.55rem;
-        height:1px;
-        background:linear-gradient(90deg, rgba(215,182,107,.02), rgba(215,182,107,.16), rgba(215,182,107,.04));
+        left:7%;
+        right:7%;
+        bottom:11px;
+        height:2px;
+        background:linear-gradient(90deg, transparent 0%, rgba(215,182,107,.07) 12%, rgba(215,182,107,.17) 50%, rgba(215,182,107,.07) 88%, transparent 100%);
+        filter:blur(.2px);
     }
     .hero-orbit {
-        position:absolute; right:9%; top:14%; width:34%; height:52%; border:1px solid rgba(215,182,107,.045);
+        position:absolute; right:8%; top:13%; width:34%; height:52%; border:1px solid rgba(215,182,107,.038);
         border-radius:50%; transform:rotate(-9deg);
-        box-shadow:0 0 55px rgba(103,215,160,.03), inset 0 0 40px rgba(215,182,107,.02);
+        box-shadow:0 0 55px rgba(103,215,160,.025), inset 0 0 40px rgba(215,182,107,.018);
     }
     .hero-swoosh {
-        position:absolute; left:-4%; right:-2%; bottom:4.15rem; height:2px; z-index:1;
-        background:linear-gradient(90deg, transparent 0%, rgba(215,182,107,.10) 17%, rgba(215,182,107,.18) 50%, rgba(215,182,107,.07) 83%, transparent 100%);
-        transform:rotate(-1.05deg); pointer-events:none;
+        position:absolute; left:-2%; right:2%; bottom:4.35rem; height:2px; z-index:1;
+        background:linear-gradient(90deg, transparent 0%, rgba(215,182,107,.08) 16%, rgba(215,182,107,.17) 52%, rgba(215,182,107,.06) 86%, transparent 100%);
+        transform:rotate(-1deg); pointer-events:none;
     }
     .hero-content { position:relative; z-index:3; max-width:820px; }
     .eyebrow { font-size:.74rem; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:800; margin-bottom:.55rem; }
@@ -254,60 +257,61 @@ def get_surah_data(surah: int, edition: str) -> List[dict]:
 # -----------------------------------------------------------------------------
 # Free neural spoken translation — generated inside Streamlit, no backend/API key
 # -----------------------------------------------------------------------------
-URDU_VOICE = "ur-PK-AsadNeural"
-URDU_RATE = "-17%"
-URDU_PITCH = "-2Hz"
+URDU_VOICE = "ur-IN-SalmanNeural"
+URDU_VOICE_FALLBACK = "ur-PK-AsadNeural"
+URDU_RATE = "-10%"
+URDU_PITCH = "-1Hz"
 EN_VOICE = "en-US-GuyNeural"
 EN_RATE = "-8%"
 EN_PITCH = "-1Hz"
 
 
 def normalize_for_urdu_speech(text: str) -> str:
-    """Create a TTS-only pronunciation layer while keeping displayed Urdu intact."""
-    punctuation = {
-        "،": "، ", "۔": "۔ ", ":": ": ", "؛": "؛ ",
-        "؟": "؟ ", "!": "! ", "  ": " ",
-    }
+    """Create a TTS-only pronunciation layer while keeping displayed Urdu intact.
 
-    # Focused pronunciation hints for Arabic-origin words that Urdu neural TTS
-    # can flatten, especially long-aa/alif sounds. The on-screen translation
-    # is never changed; only the hidden TTS input uses these spellings.
+    The visible translation is never changed. The hidden TTS text uses explicit
+    vowel marks and syllable spacing for Arabic-origin religious terms that some
+    Urdu neural voices tend to flatten.
+    """
     pronunciation = {
-        # Honorific/name phrases first, then individual sacred words.
+        # Salawat / honorific phrases first.
         "صَلَّی اللّٰہُ عَلَیْہِ وَسَلَّم": "صَلَّى اَللّٰهُ عَلَيْهِ وَسَلَّمَ",
         "صلی اللہ علیہ وسلم": "صَلَّى اَللّٰهُ عَلَيْهِ وَسَلَّمَ",
         "صلّی اللہ علیہ وسلم": "صَلَّى اَللّٰهُ عَلَيْهِ وَسَلَّمَ",
+        "صلی اللہ علیہ وآلہ وسلم": "صَلَّى اَللّٰهُ عَلَيْهِ وَآلِهِ وَسَلَّمَ",
+        "حضرت محمد مصطفیٰ": "حَضْرَت مُحَمَّد مُصْطَفٰی",
         "محمد مصطفیٰ": "مُحَمَّد مُصْطَفٰی",
         "محمد مصطفی": "مُحَمَّد مُصْطَفٰی",
         "حضرت محمد": "حَضْرَت مُحَمَّد",
         "محمد ﷺ": "مُحَمَّد",
         "محمّد ﷺ": "مُحَمَّد",
-
-        # Explicit vowel marks help the Urdu neural voice preserve the intended
-        # long-aa/alif sounds instead of flattening them.
-        "اللہ تعالیٰ": "اَللّٰهُ تَعَالٰی",
-        "اللّٰہ تعالیٰ": "اَللّٰهُ تَعَالٰی",
-        "اللہ کے": "اَللّٰه کے",
-        "اللہ کا": "اَللّٰه کا",
-        "اللہ کی": "اَللّٰه کی",
-        "اللہ سے": "اَللّٰه سے",
-        "اللہ نے": "اَللّٰه نے",
-        "اللہ کو": "اَللّٰه کو",
-        "اللہ ہی": "اَللّٰه ہی",
-        "اللّٰہ": "اَللّٰه",
-        "اللّہ": "اَللّٰه",
-        "اللہ": "اَللّٰه",
-        "الله": "اَللّٰه",
-        "محمد": "مُحَمَّد",
-        "محمّد": "مُحَمَّد",
-
-        "سبحان اللہ": "سُبْحَانَ اَللّٰه",
-        "الحمدللہ": "اَلْحَمْدُ لِلّٰه",
-        "الحمد لله": "اَلْحَمْدُ لِلّٰه",
-        "ان شاء اللہ": "اِنْ شَاءَ اَللّٰه",
-        "انشاء اللہ": "اِنْ شَاءَ اَللّٰه",
-        "ماشاء اللہ": "مَا شَاءَ اَللّٰه",
-        "بسم اللہ": "بِسْمِ اَللّٰه",
+        # Allah: syllable-separated fallback spelling makes the long-aa sound
+        # explicit to Urdu TTS instead of relying on its lexical guess.
+        "اللہ تعالیٰ": "اَل لَاہُ تَعَالٰی",
+        "اللّٰہ تعالیٰ": "اَل لَاہُ تَعَالٰی",
+        "اللہ کے": "اَل لَاہ کے",
+        "اللہ کا": "اَل لَاہ کا",
+        "اللہ کی": "اَل لَاہ کی",
+        "اللہ سے": "اَل لَاہ سے",
+        "اللہ نے": "اَل لَاہ نے",
+        "اللہ کو": "اَل لَاہ کو",
+        "اللہ ہی": "اَل لَاہ ہی",
+        "رسول اللہ": "رَسُولُ اَل لَاہ",
+        "سبحان اللہ": "سُبْحَانَ اَل لَاہ",
+        "الحمدللہ": "اَلْحَمْدُ لِلّٰہ",
+        "الحمد لله": "اَلْحَمْدُ لِلّٰہ",
+        "ان شاء اللہ": "اِنْ شَاءَ اَل لَاہ",
+        "انشاء اللہ": "اِنْ شَاءَ اَل لَاہ",
+        "ماشاء اللہ": "مَا شَاءَ اَل لَاہ",
+        "بسم اللہ": "بِسْمِ اَل لَاہ",
+        "اللّٰہ": "اَل لَاہ",
+        "اللّہ": "اَل لَاہ",
+        "اللہ": "اَل لَاہ",
+        "الله": "اَل لَاہ",
+        # Muhammad and related names.
+        "محمد": "مُ حَمَّد",
+        "محمّد": "مُ حَمَّد",
+        # Common sacred / Arabic-origin vocabulary with explicit long vowels.
         "تعالیٰ": "تَعَالٰی",
         "تعالی": "تَعَالٰی",
         "رحمن": "رَحْمٰن",
@@ -315,7 +319,6 @@ def normalize_for_urdu_speech(text: str) -> str:
         "قرآن": "قُرْآن",
         "قران": "قُرْآن",
         "رسول": "رَسُول",
-        "رسول اللہ": "رَسُولُ اَللّٰه",
         "نبی": "نَبِی",
         "انبیاء": "اَنْبِیَاء",
         "مومن": "مُؤْمِن",
@@ -341,12 +344,25 @@ def normalize_for_urdu_speech(text: str) -> str:
         "برکت": "بَرَکَت",
         "آخرت": "آخِرَت",
         "قیامت": "قِیَامَت",
+        "عبادت": "عِبَادَت",
+        "اعمال": "اَعْمَال",
+        "انسان": "اِنْسَان",
+        "ہدایت": "ہِدَایَت",
+        "حکمت": "حِکْمَت",
+        "رسالت": "رِسَالَت",
+        "وحی": "وَحْی",
+        "فرشتے": "فِرِشْتے",
+        "شیطان": "شَیْطَان",
     }
+
     out = text.strip()
     for old_word in sorted(pronunciation, key=len, reverse=True):
         out = out.replace(old_word, pronunciation[old_word])
-    for old, new in punctuation.items():
-        out = out.replace(old, new)
+
+    # Deliberate pauses at Urdu sentence boundaries.
+    for mark in ["۔", "؟", "!", "؛", ":"]:
+        out = out.replace(mark, mark + " ")
+    out = out.replace("،", "، ")
     return " ".join(out.split())
 
 
@@ -356,20 +372,31 @@ def synthesize_tts(text: str, language: str) -> bytes:
         return b""
 
     if language == "ur":
-        voice, rate, pitch = URDU_VOICE, URDU_RATE, URDU_PITCH
         text = normalize_for_urdu_speech(text)
+        voices = [URDU_VOICE, URDU_VOICE_FALLBACK]
+        rate, pitch = URDU_RATE, URDU_PITCH
     else:
-        voice, rate, pitch = EN_VOICE, EN_RATE, EN_PITCH
+        voices = [EN_VOICE]
+        rate, pitch = EN_RATE, EN_PITCH
 
-    async def _run() -> bytes:
+    async def _run(voice: str) -> bytes:
         communicate = edge_tts.Communicate(text, voice=voice, rate=rate, pitch=pitch)
         buf = io.BytesIO()
         async for chunk in communicate.stream():
             if chunk["type"] == "audio":
                 buf.write(chunk["data"])
-        return buf.getvalue()
+        data = buf.getvalue()
+        if not data:
+            raise RuntimeError(f"No audio returned by {voice}")
+        return data
 
-    return asyncio.run(_run())
+    last_error = None
+    for voice in voices:
+        try:
+            return asyncio.run(_run(voice))
+        except Exception as exc:
+            last_error = exc
+    raise RuntimeError(f"TTS failed for all configured voices: {last_error}")
 
 
 def audio_data_url(audio_bytes: bytes) -> str:
@@ -383,7 +410,7 @@ st.markdown(
     """
     <div class="hero">
       <div class="hero-art" aria-hidden="true">
-        <div class="hero-calligraphy" aria-hidden="true">بِسْمِ اللّٰهِ</div>
+        <div class="hero-calligraphy" aria-hidden="true">بِسْمِ اللَّهِ</div>
         <div class="hero-orbit"></div>
         <div class="hero-swoosh"></div>
       </div>
@@ -726,6 +753,6 @@ else:
     # Extra height prevents the floating pill from being clipped.
     components.html(player_html, height=405)
     st.markdown(
-        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken meaning: free Edge neural TTS.</div>',
+        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken meaning: free Edge neural TTS • calm male Urdu voice with pronunciation guidance.</div>',
         unsafe_allow_html=True,
     )
