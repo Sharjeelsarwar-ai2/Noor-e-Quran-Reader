@@ -318,107 +318,44 @@ EN_PITCH = "-1Hz"
 def normalize_for_urdu_speech(text: str) -> str:
     """Create a TTS-only pronunciation layer while keeping displayed Urdu intact.
 
-    The visible translation is never changed. The hidden TTS text uses explicit
-    vowel marks and syllable spacing for Arabic-origin religious terms that some
-    Urdu neural voices tend to flatten.
+    The visible translation is never changed here — only the hidden copy sent
+    to the speech engine.
+
+    An earlier version of this function added Arabic harakat (the small
+    Quranic vowel/gemination marks) to words like اللہ, محمد, ایمان and
+    کتاب, hoping to spell out the long "aa" sound explicitly. That turned out
+    to be the actual cause of the bad pronunciation, not the fix for it: this
+    voice — like almost every Urdu neural voice — is trained on ordinary,
+    undiacritized Urdu text. اللہ, محمد, ایمان and کتاب are already spelled
+    completely unambiguously in plain Urdu (اللہ already contains two lams;
+    ایمان and کتاب already contain the alif that makes their "aa" sound).
+    Layering combining vowel marks onto them pushed the text outside anything
+    the model was trained on, so it fell back to a much worse letter-by-letter
+    guess. So this function now leaves ordinary words alone and only touches
+    the couple of things that have no sound of their own as written.
     """
-    pronunciation = {
-        # Salawat / honorific phrases first.
-        "صَلَّی اللّٰہُ عَلَیْہِ وَسَلَّم": "صَلَّى اَللّٰهُ عَلَيْهِ وَسَلَّمَ",
-        "صلی اللہ علیہ وسلم": "صَلَّى اَللّٰهُ عَلَيْهِ وَسَلَّمَ",
-        "صلّی اللہ علیہ وسلم": "صَلَّى اَللّٰهُ عَلَيْهِ وَسَلَّمَ",
-        "صلی اللہ علیہ وآلہ وسلم": "صَلَّى اَللّٰهُ عَلَيْهِ وَآلِهِ وَسَلَّمَ",
-        "حضرت محمد مصطفیٰ": "حَضْرَت مُحَمَّد مُصْطَفٰی",
-        "محمد مصطفیٰ": "مُحَمَّد مُصْطَفٰی",
-        "محمد مصطفی": "مُحَمَّد مُصْطَفٰی",
-        "حضرت محمد": "حَضْرَت مُحَمَّد",
-        "محمد ﷺ": "مُحَمَّد",
-        "محمّد ﷺ": "مُحَمَّد",
-        # Allah: written as ONE unbroken word with a doubling shadda on the
-        # second lam and a plain (non-superscript) alif before the heh. The
-        # earlier version split "Al" and "laah" with a space, which made the
-        # voice read it as two separate words with a gap — that broken join,
-        # not the diacritics, was why it sounded wrong. A shadda + regular
-        # alif keeps it one fluid word and makes the long "aa" explicit.
-        "اللہ تعالیٰ": "اَللَّاہُ تَعَالٰی",
-        "اللّٰہ تعالیٰ": "اَللَّاہُ تَعَالٰی",
-        "اللہ کے": "اَللَّاہ کے",
-        "اللہ کا": "اَللَّاہ کا",
-        "اللہ کی": "اَللَّاہ کی",
-        "اللہ سے": "اَللَّاہ سے",
-        "اللہ نے": "اَللَّاہ نے",
-        "اللہ کو": "اَللَّاہ کو",
-        "اللہ ہی": "اَللَّاہ ہی",
-        "رسول اللہ": "رَسُولُ اَللَّاہ",
-        "سبحان اللہ": "سُبْحَانَ اَللَّاہ",
-        "الحمدللہ": "اَلْحَمْدُ لِلّٰہ",
-        "الحمد لله": "اَلْحَمْدُ لِلّٰہ",
-        "ان شاء اللہ": "اِنْ شَاءَ اَللَّاہ",
-        "انشاء اللہ": "اِنْ شَاءَ اَللَّاہ",
-        "ماشاء اللہ": "مَا شَاءَ اَللَّاہ",
-        "بسم اللہ": "بِسْمِ اَللَّاہ",
-        "اللّٰہ": "اَللَّاہ",
-        "اللّہ": "اَللَّاہ",
-        "اللہ": "اَللَّاہ",
-        "الله": "اَللَّاہ",
-        # Muhammad — likewise kept as one unbroken word (no internal space),
-        # with a shadda on the doubled meem to mark the stressed syllable.
-        "محمد": "مُحَمَّد",
-        "محمّد": "مُحَمَّد",
-        # Common sacred / Arabic-origin vocabulary with explicit long vowels.
-        "تعالیٰ": "تَعَالٰی",
-        "تعالی": "تَعَالٰی",
-        "رحمن": "رَحْمٰن",
-        "رحیم": "رَحِیم",
-        "قرآن": "قُرْآن",
-        "قران": "قُرْآن",
-        "رسول": "رَسُول",
-        "نبی": "نَبِی",
-        "انبیاء": "اَنْبِیَاء",
-        "مومن": "مُؤْمِن",
-        "مومنین": "مُؤْمِنِین",
-        "ایمان": "اِیمَان",
-        "اسلام": "اِسْلَام",
-        "الاسلام": "اَلْاِسْلَام",
-        "دعا": "دُعَاء",
-        "نماز": "نَمَاز",
-        "زکوٰۃ": "زَکٰوۃ",
-        "زکات": "زَکَات",
-        "جنت": "جَنَّت",
-        "جہنم": "جَہَنَّم",
-        "آسمانوں": "آسْمَانوں",
-        "آسمان": "آسْمَان",
-        "دنیا": "دُنْیَا",
-        "عذاب": "عَذَاب",
-        "ثواب": "ثَوَاب",
-        "کتاب": "کِتَاب",
-        "حساب": "حِسَاب",
-        "عالمین": "عَالَمِین",
-        "رحمت": "رَحْمَت",
-        "برکت": "بَرَکَت",
-        "آخرت": "آخِرَت",
-        "قیامت": "قِیَامَت",
-        "عبادت": "عِبَادَت",
-        "اعمال": "اَعْمَال",
-        "انسان": "اِنْسَان",
-        "ہدایت": "ہِدَایَت",
-        "حکمت": "حِکْمَت",
-        "رسالت": "رِسَالَت",
-        "وحی": "وَحْی",
-        "فرشتے": "فِرِشْتے",
-        "شیطان": "شَیْطَان",
+    replacements = {
+        # ﷺ / ﷻ are typographic glyphs with no pronunciation — expand them to
+        # the plain phrase they stand for, spelled normally (no diacritics).
+        "ﷺ": "صلی اللہ علیہ وسلم",
+        "ﷻ": "سبحانہ وتعالی",
+        # Run-together spellings can confuse word-boundary detection — split
+        # them into their normal, separately-spelled words (still no diacritics).
+        "الحمدللہ": "الحمد للہ",
+        "ماشاءاللہ": "ماشاء اللہ",
+        "انشاءاللہ": "انشاء اللہ",
+        "استغفراللہ": "استغفر اللہ",
     }
 
     out = text.strip()
-    for old_word in sorted(pronunciation, key=len, reverse=True):
-        out = out.replace(old_word, pronunciation[old_word])
+    for old, new in replacements.items():
+        out = out.replace(old, new)
 
-    # Normalize the "dagger alif" (superscript alef, U+0670) to a plain alif.
-    # It's the correct Quranic spelling mark for a long "aa" vowel, but many
-    # Urdu TTS phonemizers don't expand it and instead clip or drop the vowel
-    # entirely — which is the main reason "aa"-sound words (Allah, ta'ala,
-    # rahman, etc.) were coming out short/flat even with diacritics added
-    # above. A regular alif is read reliably as the long vowel it represents.
+    # Normalize the rare "dagger alif" (superscript alef, U+0670) — sometimes
+    # present in Quranic-style spellings such as تعالیٰ — to a plain alif.
+    # This voice's text front-end doesn't reliably expand that mark, so
+    # swapping it for the ordinary letter keeps the long vowel it represents
+    # without introducing an unfamiliar combining character.
     out = out.replace("\u0670", "ا")
 
     # Deliberate pauses at Urdu sentence boundaries.
