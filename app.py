@@ -48,7 +48,7 @@ st.markdown(
     /* ---------------- HERO ---------------- */
     .hero {
         position:relative; isolation:isolate; overflow:hidden;
-        padding:2.45rem 2.55rem 2.55rem; margin-bottom:1.45rem;
+        padding:2.55rem 2.65rem 2.65rem; margin-bottom:1.45rem;
         border:1px solid rgba(255,255,255,.12); border-radius:32px;
         background:
           linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.028)),
@@ -62,19 +62,34 @@ st.markdown(
           radial-gradient(circle at 85% 28%, rgba(104,217,162,.10), transparent 24%),
           linear-gradient(105deg, transparent 18%, rgba(255,255,255,.028) 50%, transparent 78%);
     }
+    /* Contained calligraphy artwork: everything is clipped INSIDE the hero. */
+    .hero-art {
+        position:absolute; inset:0; overflow:hidden; pointer-events:none; user-select:none; z-index:1;
+    }
     .hero-calligraphy {
-        position:absolute; right:2.4rem; top:.55rem; z-index:1;
-        font-family:"Amiri", "Noto Naskh Arabic", serif;
-        font-size:clamp(6.2rem,12vw,10rem); line-height:1; white-space:nowrap;
-        color:rgba(215,182,107,.085);
-        text-shadow:0 0 36px rgba(215,182,107,.035);
-        transform:rotate(-1.2deg); pointer-events:none; user-select:none;
-        filter:blur(.15px);
+        position:absolute; right:2%; top:50%; transform:translateY(-52%) rotate(-1.2deg);
+        width:72%; max-width:860px; height:62%; display:flex; align-items:center; justify-content:center;
+        font-family:"Noto Naskh Arabic","Amiri",serif; direction:rtl;
+        font-size:clamp(3.3rem,7.4vw,7.4rem); line-height:1; white-space:nowrap;
+        color:rgba(215,182,107,.075);
+        text-shadow:0 0 28px rgba(215,182,107,.035);
+        letter-spacing:.025em;
+    }
+    .hero-calligraphy::before, .hero-calligraphy::after {
+        content:""; position:absolute; top:50%; height:1px; width:18%;
+        background:linear-gradient(90deg, transparent, rgba(215,182,107,.22));
+    }
+    .hero-calligraphy::before { right:2%; }
+    .hero-calligraphy::after { left:2%; transform:rotate(180deg); }
+    .hero-orbit {
+        position:absolute; right:9%; top:14%; width:34%; height:52%; border:1px solid rgba(215,182,107,.045);
+        border-radius:50%; transform:rotate(-9deg);
+        box-shadow:0 0 55px rgba(103,215,160,.03), inset 0 0 40px rgba(215,182,107,.02);
     }
     .hero-swoosh {
-        position:absolute; left:-5%; right:8%; bottom:4.5rem; height:2px; z-index:1;
-        background:linear-gradient(90deg, transparent, rgba(215,182,107,.15), rgba(215,182,107,.08), transparent);
-        transform:rotate(-1deg); pointer-events:none;
+        position:absolute; left:-4%; right:-2%; bottom:4.15rem; height:2px; z-index:1;
+        background:linear-gradient(90deg, transparent 0%, rgba(215,182,107,.10) 17%, rgba(215,182,107,.18) 50%, rgba(215,182,107,.07) 83%, transparent 100%);
+        transform:rotate(-1.05deg); pointer-events:none;
     }
     .hero-content { position:relative; z-index:3; max-width:820px; }
     .eyebrow { font-size:.74rem; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:800; margin-bottom:.55rem; }
@@ -90,14 +105,14 @@ st.markdown(
         box-shadow:0 18px 50px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.035);
     }
     .glass-card::before {
-        content:"۞"; position:absolute; left:-.2rem; top:-1.15rem;
-        font-family:"Amiri",serif; font-size:5.4rem; line-height:1;
-        color:rgba(215,182,107,.03); transform:rotate(-10deg); pointer-events:none; z-index:0;
+        content:"بِسْمِ اللَّهِ"; position:absolute; left:1.1rem; top:-.55rem;
+        font-family:"Noto Naskh Arabic","Amiri",serif; font-size:2.4rem; line-height:1;
+        color:rgba(215,182,107,.035); transform:rotate(-3deg); pointer-events:none; z-index:-1; direction:rtl;
     }
     .glass-card::after {
-        content:"﷽"; position:absolute; right:-1.6rem; bottom:-2.1rem;
-        font-family:"Amiri",serif; font-size:5.3rem; line-height:1;
-        color:rgba(104,217,162,.024); transform:rotate(-3deg); pointer-events:none; z-index:0;
+        content:"الْحَمْدُ لِلَّهِ"; position:absolute; right:1rem; bottom:-.62rem;
+        font-family:"Noto Naskh Arabic","Amiri",serif; font-size:2.45rem; line-height:1;
+        color:rgba(104,217,162,.035); transform:rotate(2deg); pointer-events:none; z-index:-1; direction:rtl;
     }
     .surah-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:.25rem 0 1rem; }
     .surah-title { font-size:1.55rem; font-weight:800; letter-spacing:-.025em; }
@@ -124,14 +139,14 @@ st.markdown(
         transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease;
     }
     [data-testid="stSelectbox"] [data-baseweb="select"] > div::before {
-        content:"۞"; position:absolute; left:1.05rem; top:50%; transform:translateY(-53%);
-        font-family:"Amiri",serif; font-size:1.5rem; color:rgba(215,182,107,.82);
-        pointer-events:none; z-index:5; text-shadow:0 0 18px rgba(215,182,107,.12);
+        content:"۞"; position:absolute; left:.95rem; top:50%; transform:translateY(-52%);
+        font-family:"Noto Naskh Arabic","Amiri",serif; font-size:1.45rem; color:rgba(215,182,107,.62);
+        pointer-events:none; z-index:3; text-shadow:0 0 16px rgba(215,182,107,.10);
     }
     [data-testid="stSelectbox"] [data-baseweb="select"] > div::after {
-        content:"القرآن"; position:absolute; right:3.25rem; top:50%; transform:translateY(-54%);
-        font-family:"Amiri",serif; font-size:.95rem; color:rgba(215,182,107,.48);
-        pointer-events:none; z-index:5;
+        content:"القرآن"; position:absolute; right:3.05rem; top:50%; transform:translateY(-54%);
+        font-family:"Noto Naskh Arabic","Amiri",serif; font-size:.92rem; color:rgba(215,182,107,.36);
+        pointer-events:none; z-index:3;
     }
     [data-testid="stSelectbox"] [data-baseweb="select"] > div:hover,
     [data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within {
@@ -323,8 +338,11 @@ def audio_data_url(audio_bytes: bytes) -> str:
 st.markdown(
     """
     <div class="hero">
-      <div class="hero-calligraphy" aria-hidden="true">﷽</div>
-      <div class="hero-swoosh" aria-hidden="true"></div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="hero-calligraphy">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div>
+        <div class="hero-orbit"></div>
+        <div class="hero-swoosh"></div>
+      </div>
       <div class="hero-content">
         <div class="eyebrow">Read • Reflect • Listen</div>
         <h1>Noor</h1>
