@@ -66,31 +66,41 @@ st.markdown(
     .hero-art {
         position:absolute; inset:0; overflow:hidden; pointer-events:none; user-select:none; z-index:1;
     }
+    /* The original Noor look: one elegant Bismillah phrase sits behind the title.
+       It is deliberately kept fully inside the hero bounds so no glyph can leak
+       into the page gap or be clipped by the viewport. */
     .hero-calligraphy {
         position:absolute;
-        left:7.2%;
-        top:6%;
-        transform:rotate(-3deg);
-        width:min(58%, 760px);
+        left:2.0rem;
+        top:1.15rem;
+        width:72%;
+        max-width:780px;
         height:auto;
         display:block;
         font-family:"Amiri","Noto Naskh Arabic",serif;
         direction:rtl;
-        font-size:clamp(4.8rem,8vw,8.6rem);
+        text-align:left;
+        font-size:clamp(3.8rem,6.8vw,7.1rem);
         font-weight:700;
-        line-height:1;
+        line-height:.95;
         white-space:nowrap;
-        color:rgba(215,182,107,.075);
-        text-shadow:0 3px 26px rgba(215,182,107,.045);
-        letter-spacing:.01em;
+        color:rgba(215,182,107,.125);
+        text-shadow:0 6px 34px rgba(215,182,107,.075);
+        letter-spacing:0;
+        transform:rotate(-3deg);
+        transform-origin:left top;
         z-index:1;
+        opacity:.92;
     }
-    .hero-calligraphy::before, .hero-calligraphy::after {
-        content:""; position:absolute; top:50%; height:1px; width:18%;
-        background:linear-gradient(90deg, transparent, rgba(215,182,107,.22));
+    .hero-calligraphy::before {
+        content:"";
+        position:absolute;
+        left:1.5%;
+        right:3%;
+        bottom:-.55rem;
+        height:1px;
+        background:linear-gradient(90deg, rgba(215,182,107,.02), rgba(215,182,107,.16), rgba(215,182,107,.04));
     }
-    .hero-calligraphy::before { right:2%; }
-    .hero-calligraphy::after { left:2%; transform:rotate(180deg); }
     .hero-orbit {
         position:absolute; right:9%; top:14%; width:34%; height:52%; border:1px solid rgba(215,182,107,.045);
         border-radius:50%; transform:rotate(-9deg);
@@ -245,8 +255,8 @@ def get_surah_data(surah: int, edition: str) -> List[dict]:
 # Free neural spoken translation — generated inside Streamlit, no backend/API key
 # -----------------------------------------------------------------------------
 URDU_VOICE = "ur-PK-AsadNeural"
-URDU_RATE = "-14%"
-URDU_PITCH = "-1Hz"
+URDU_RATE = "-17%"
+URDU_PITCH = "-2Hz"
 EN_VOICE = "en-US-GuyNeural"
 EN_RATE = "-8%"
 EN_PITCH = "-1Hz"
@@ -263,28 +273,51 @@ def normalize_for_urdu_speech(text: str) -> str:
     # can flatten, especially long-aa/alif sounds. The on-screen translation
     # is never changed; only the hidden TTS input uses these spellings.
     pronunciation = {
-        "اللہ تعالیٰ": "اَللّٰہ تَعَالٰی",
-        "سبحان اللہ": "سُبْحَانَ اَللّٰہ",
-        "الحمدللہ": "اَلْحَمْدُ لِلّٰہ",
-        "ان شاء اللہ": "اِنْ شَاءَ اَللّٰہ",
-        "ماشاء اللہ": "مَا شَاءَ اَللّٰہ",
-        "بسم اللہ": "بِسْمِ اَللّٰہ",
-        "اللّٰہ": "اَللّٰہ",
-        "اللّہ": "اَللّٰہ",
-        "اللہ": "اَللّٰہ",
+        # Honorific/name phrases first, then individual sacred words.
+        "صَلَّی اللّٰہُ عَلَیْہِ وَسَلَّم": "صَلَّى اَللّٰهُ عَلَيْهِ وَسَلَّمَ",
+        "صلی اللہ علیہ وسلم": "صَلَّى اَللّٰهُ عَلَيْهِ وَسَلَّمَ",
+        "صلّی اللہ علیہ وسلم": "صَلَّى اَللّٰهُ عَلَيْهِ وَسَلَّمَ",
+        "محمد مصطفیٰ": "مُحَمَّد مُصْطَفٰی",
+        "محمد مصطفی": "مُحَمَّد مُصْطَفٰی",
+        "حضرت محمد": "حَضْرَت مُحَمَّد",
+        "محمد ﷺ": "مُحَمَّد",
+        "محمّد ﷺ": "مُحَمَّد",
+
+        # Explicit vowel marks help the Urdu neural voice preserve the intended
+        # long-aa/alif sounds instead of flattening them.
+        "اللہ تعالیٰ": "اَللّٰهُ تَعَالٰی",
+        "اللّٰہ تعالیٰ": "اَللّٰهُ تَعَالٰی",
+        "اللہ کے": "اَللّٰه کے",
+        "اللہ کا": "اَللّٰه کا",
+        "اللہ کی": "اَللّٰه کی",
+        "اللہ سے": "اَللّٰه سے",
+        "اللہ نے": "اَللّٰه نے",
+        "اللہ کو": "اَللّٰه کو",
+        "اللہ ہی": "اَللّٰه ہی",
+        "اللّٰہ": "اَللّٰه",
+        "اللّہ": "اَللّٰه",
+        "اللہ": "اَللّٰه",
         "الله": "اَللّٰه",
+        "محمد": "مُحَمَّد",
+        "محمّد": "مُحَمَّد",
+
+        "سبحان اللہ": "سُبْحَانَ اَللّٰه",
+        "الحمدللہ": "اَلْحَمْدُ لِلّٰه",
+        "الحمد لله": "اَلْحَمْدُ لِلّٰه",
+        "ان شاء اللہ": "اِنْ شَاءَ اَللّٰه",
+        "انشاء اللہ": "اِنْ شَاءَ اَللّٰه",
+        "ماشاء اللہ": "مَا شَاءَ اَللّٰه",
+        "بسم اللہ": "بِسْمِ اَللّٰه",
         "تعالیٰ": "تَعَالٰی",
         "تعالی": "تَعَالٰی",
         "رحمن": "رَحْمٰن",
         "رحیم": "رَحِیم",
         "قرآن": "قُرْآن",
         "قران": "قُرْآن",
-        "آخرت": "آخِرَت",
-        "قیامت": "قِیَامَت",
         "رسول": "رَسُول",
+        "رسول اللہ": "رَسُولُ اَللّٰه",
         "نبی": "نَبِی",
         "انبیاء": "اَنْبِیَاء",
-        "محمد": "مُحَمَّد",
         "مومن": "مُؤْمِن",
         "مومنین": "مُؤْمِنِین",
         "ایمان": "اِیمَان",
@@ -296,8 +329,8 @@ def normalize_for_urdu_speech(text: str) -> str:
         "زکات": "زَکَات",
         "جنت": "جَنَّت",
         "جہنم": "جَہَنَّم",
-        "آسمان": "آسْمَان",
         "آسمانوں": "آسْمَانوں",
+        "آسمان": "آسْمَان",
         "دنیا": "دُنْیَا",
         "عذاب": "عَذَاب",
         "ثواب": "ثَوَاب",
@@ -306,8 +339,9 @@ def normalize_for_urdu_speech(text: str) -> str:
         "عالمین": "عَالَمِین",
         "رحمت": "رَحْمَت",
         "برکت": "بَرَکَت",
+        "آخرت": "آخِرَت",
+        "قیامت": "قِیَامَت",
     }
-
     out = text.strip()
     for old_word in sorted(pronunciation, key=len, reverse=True):
         out = out.replace(old_word, pronunciation[old_word])
@@ -349,7 +383,7 @@ st.markdown(
     """
     <div class="hero">
       <div class="hero-art" aria-hidden="true">
-        <div class="hero-calligraphy">بِسْمِ اللَّهِ</div>
+        <div class="hero-calligraphy" aria-hidden="true">بِسْمِ اللّٰهِ</div>
         <div class="hero-orbit"></div>
         <div class="hero-swoosh"></div>
       </div>
