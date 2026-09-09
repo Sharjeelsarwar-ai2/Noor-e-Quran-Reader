@@ -1,7 +1,10 @@
+import base64
 import html
+import io
 import json
 import re
-from urllib.parse import quote
+
+from gtts import gTTS
 
 import requests
 import streamlit as st
@@ -43,15 +46,20 @@ st.markdown(
         color: var(--text);
     }
 
-    [data-testid="stHeader"] {
-        background: rgba(7,17,14,.72);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
+    /* Remove Streamlit's upper chrome so the app starts cleanly at the hero. */
+    header,
+    [data-testid="stHeader"],
+    [data-testid="stToolbar"],
+    [data-testid="stDecoration"],
+    #MainMenu,
+    footer {
+        display: none !important;
+        visibility: hidden !important;
     }
 
     .block-container {
         max-width: 1180px;
-        padding-top: 1.6rem;
+        padding-top: 1.15rem;
         padding-bottom: 5rem;
     }
 
@@ -309,12 +317,18 @@ def split_for_tts(text: str, max_chars: int = 175):
     return chunks
 
 
-def google_tts_url(text: str, lang: str) -> str:
-    encoded = quote(text, safe="")
-    return (
-        "https://translate.google.com/translate_tts"
-        f"?ie=UTF-8&client=tw-ob&tl={lang}&q={encoded}"
-    )
+@st.cache_data(ttl=60 * 60 * 24 * 7, show_spinner=False)
+def make_tts_data_url(text: str, lang: str) -> str:
+    """Generate actual MP3 bytes server-side and return a self-contained data URL.
+
+    This avoids browser/remote-autoplay and old translate_tts endpoint problems.
+    """
+    if not text:
+        return ""
+    audio = io.BytesIO()
+    gTTS(text=text, lang=lang, slow=False).write_to_fp(audio)
+    encoded = base64.b64encode(audio.getvalue()).decode("ascii")
+    return f"data:audio/mpeg;base64,{encoded}"
 
 
 # ---------- Header ----------
@@ -469,13 +483,21 @@ else:
         if translation_ayahs and i < len(translation_ayahs):
             translation_text = translation_ayahs[i].get("text", "")
 
-        # Build client-side TTS chunks lazily. No API key is required.
+        # Generate real spoken translation audio server-side.
+        # The browser then plays the resulting MP3 bytes in sequence.
         tts_chunks = []
         if translation_language and translation_text:
-            tts_chunks = [
-                {"text": chunk, "url": google_tts_url(chunk, translation_language)}
-                for chunk in split_for_tts(translation_text)
-            ]
+            for chunk in split_for_tts(translation_text):
+                try:
+                    audio_url = make_tts_data_url(chunk, translation_language)
+                    if audio_url:
+                        tts_chunks.append({"text": chunk, "url": audio_url})
+                except Exception as exc:
+                    # Keep the Arabic recitation usable even if TTS generation fails.
+                    st.warning(
+                        f"{('Urdu' if translation_language == 'ur' else 'English')} voice could not be generated for Ayah {ayah.get('numberInSurah', i + 1)}."
+                    )
+                    break
 
         tracks.append(
             {
@@ -824,6 +846,6 @@ else:
     components.html(component_html, height=410)
 
     st.markdown(
-        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken translation uses Google Translate TTS audio URLs and requires no API key.</div>',
+        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken translation audio is generated server-side.</div>',
         unsafe_allow_html=True,
     )
