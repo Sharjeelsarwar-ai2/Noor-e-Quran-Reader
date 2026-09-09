@@ -51,17 +51,17 @@ st.markdown(
         background:radial-gradient(circle at 82% 25%,rgba(103,215,160,.08),transparent 25%),
         linear-gradient(115deg,transparent 40%,rgba(255,255,255,.025),transparent 70%);
         z-index:-2; pointer-events:none; }
-    .hero::after { content:"﷽"; position:absolute; right:-1.5rem; top:.6rem;
-        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:clamp(5rem,11vw,8.4rem);
-        line-height:1; white-space:nowrap; color:rgba(214,179,106,.075);
-        text-shadow:0 0 28px rgba(214,179,106,.04); z-index:-1; pointer-events:none;
+    .hero::after { content:"﷽"; position:absolute; right:2.2rem; top:.35rem;
+        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:clamp(6rem,12vw,9.2rem);
+        line-height:1; white-space:nowrap; color:rgba(214,179,106,.095);
+        text-shadow:0 0 30px rgba(214,179,106,.045); z-index:1; pointer-events:none;
         user-select:none; transform:rotate(-1deg); }
-    .hero-content { position:relative; z-index:2; max-width:820px; }
+    .hero-content { position:relative; z-index:3; max-width:820px; }
     .eyebrow { font-size:.76rem; letter-spacing:.16em; text-transform:uppercase; color:var(--accent);
         font-weight:800; margin-bottom:.5rem; }
     .hero h1 { margin:0; font-size:clamp(2.3rem,4.5vw,3.55rem); line-height:1; letter-spacing:-.04em; }
     .hero p { color:var(--muted); margin:.85rem 0 0; max-width:760px; font-size:1rem; line-height:1.7; }
-    .glass-card { position:relative; isolation:isolate; overflow:hidden; border:1px solid var(--border); border-radius:24px; background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.028));
+    .glass-card { position:relative; isolation:isolate; overflow:hidden; z-index:0; border:1px solid var(--border); border-radius:24px; background:linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.028));
         padding:1.2rem; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
         box-shadow:0 14px 45px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.035); }
     .glass-card::before { content:"۞"; position:absolute; left:-.15rem; top:-1rem; font-family:"Amiri","Noto Naskh Arabic",serif;
@@ -72,29 +72,49 @@ st.markdown(
     .surah-title { font-size:1.55rem; font-weight:800; letter-spacing:-.02em; }
     .surah-sub { color:var(--muted); font-size:.9rem; }
 
-    /* Enhanced Surah selector: more glass, softer glow, subtle Arabic ornament. */
-    .stSelectbox { position:relative; }
-    .stSelectbox::before { content:"۞"; position:absolute; left:14px; top:50%; transform:translateY(-51%); z-index:3;
-        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:1.05rem; color:rgba(214,179,106,.72);
-        pointer-events:none; text-shadow:0 0 14px rgba(214,179,106,.12); }
-    .stSelectbox::after { content:"القرآن"; position:absolute; right:42px; top:-1.05rem; z-index:3;
-        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:.92rem; color:rgba(214,179,106,.42);
-        pointer-events:none; letter-spacing:.02em; }
-    div[data-baseweb="select"] { filter:drop-shadow(0 14px 28px rgba(0,0,0,.12)); }
-    div[data-baseweb="select"] > div { min-height:58px; padding-left:2.2rem !important; padding-right:2.8rem !important;
-        background:linear-gradient(135deg,rgba(36,39,53,.94),rgba(28,30,42,.88)) !important;
-        border:1px solid rgba(255,255,255,.12) !important; border-radius:18px !important;
-        box-shadow:inset 0 1px 0 rgba(255,255,255,.055), 0 10px 28px rgba(0,0,0,.16) !important;
-        backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); transition:all .22s ease; }
-    div[data-baseweb="select"] > div:hover { border-color:rgba(103,215,160,.34) !important;
-        box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 0 0 1px rgba(103,215,160,.06), 0 14px 32px rgba(0,0,0,.18) !important;
-        transform:translateY(-1px); }
-    div[data-baseweb="select"] span { font-weight:650 !important; color:#f2f5f4 !important; }
-    div[data-baseweb="select"] svg { color:rgba(214,179,106,.9) !important; }
-    [data-baseweb="popover"] { background:rgba(17,25,22,.97) !important; border:1px solid rgba(255,255,255,.10) !important;
-        border-radius:18px !important; box-shadow:0 24px 60px rgba(0,0,0,.35) !important; backdrop-filter:blur(20px); }
-    [role="option"] { color:#e8efec !important; min-height:44px !important; }
-    [role="option"]:hover, [aria-selected="true"] { background:rgba(103,215,160,.09) !important; }
+    /* Enhanced Surah selector: full glass treatment + Arabic ornament. */
+    [data-testid="stSelectbox"] { position:relative; z-index:5; }
+    [data-testid="stSelectbox"]::before { content:"﷽"; position:absolute; right:18px; top:-17px;
+        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:1.05rem; line-height:1;
+        color:rgba(214,179,106,.72); pointer-events:none; z-index:8;
+        text-shadow:0 0 18px rgba(214,179,106,.16); }
+    [data-testid="stSelectbox"]::after { content:"۞  القرآن  ۞"; position:absolute; left:18px; bottom:-13px;
+        font-family:"Amiri","Noto Naskh Arabic",serif; font-size:.78rem; line-height:1;
+        color:rgba(214,179,106,.38); letter-spacing:.04em; pointer-events:none; z-index:8; }
+    [data-testid="stSelectbox"] label { display:none !important; }
+    div[data-baseweb="select"] { filter:drop-shadow(0 16px 30px rgba(0,0,0,.18)); }
+    div[data-baseweb="select"] > div { min-height:62px; padding:0 3rem 0 1.1rem !important;
+        background:
+          radial-gradient(circle at 8% 50%, rgba(103,215,160,.10), transparent 28%),
+          linear-gradient(135deg, rgba(35,48,43,.86), rgba(18,28,25,.76)) !important;
+        border:1px solid rgba(255,255,255,.13) !important; border-radius:20px !important;
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.07),
+          inset 0 0 0 1px rgba(103,215,160,.035),
+          0 12px 30px rgba(0,0,0,.18) !important;
+        backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px);
+        transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease; }
+    div[data-baseweb="select"] > div::before { content:""; position:absolute; inset:1px; border-radius:19px;
+        pointer-events:none; border:1px solid rgba(103,215,160,.05);
+        background:linear-gradient(110deg, transparent 0%, rgba(255,255,255,.025) 48%, transparent 70%); }
+    div[data-baseweb="select"] > div:hover { transform:translateY(-2px);
+        border-color:rgba(103,215,160,.34) !important;
+        background:
+          radial-gradient(circle at 8% 50%, rgba(103,215,160,.14), transparent 30%),
+          linear-gradient(135deg, rgba(40,57,50,.94), rgba(20,32,28,.86)) !important;
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.09),
+          0 0 0 1px rgba(103,215,160,.07),
+          0 18px 40px rgba(0,0,0,.24),
+          0 0 28px rgba(103,215,160,.055) !important; }
+    div[data-baseweb="select"] span { font-weight:650 !important; color:#f4f7f5 !important; }
+    div[data-baseweb="select"] svg { color:rgba(214,179,106,.95) !important; width:20px; height:20px; }
+    [data-baseweb="popover"] { background:rgba(14,24,21,.975) !important; border:1px solid rgba(255,255,255,.11) !important;
+        border-radius:20px !important; box-shadow:0 26px 70px rgba(0,0,0,.42) !important;
+        backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); padding:5px !important; }
+    [role="listbox"] { background:transparent !important; }
+    [role="option"] { color:#e8efec !important; min-height:48px !important; border-radius:13px !important; margin:2px 0 !important; }
+    [role="option"]:hover, [aria-selected="true"] { background:rgba(103,215,160,.11) !important; }
 
     .ayah-card { position:relative; isolation:isolate; overflow:hidden; border:1px solid rgba(255,255,255,.09); border-radius:22px; padding:1.25rem 1.35rem;
         margin:.95rem 0; background:linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.02));
