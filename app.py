@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import time
 from typing import Dict, List, Optional
 
 import edge_tts
@@ -304,6 +305,31 @@ def get_surah_data(surah: int, edition: str) -> List[dict]:
     return get_json(f"{BASE_URL}/surah/{surah}/{edition}")["data"]["ayahs"]
 
 
+@st.cache_data(ttl=60 * 60 * 24, show_spinner=False)
+def find_audio_edition(language: str) -> Optional[str]:
+    """Find a real, professionally-recorded per-ayah audio edition for a
+    translation language (e.g. a Qari reciting the Urdu or English meaning),
+    if alquran.cloud has one. Restricted to type=versebyverse so we only ever
+    get back an edition with one audio file per ayah — matching how the
+    player below steps through ayahs — rather than a single whole-surah file.
+    Returns None if no such recording exists for that language, so the
+    caller can fall back to synthesized speech.
+    """
+    try:
+        data = get_json(f"{BASE_URL}/edition?format=audio&language={language}&type=versebyverse")["data"]
+    except Exception:
+        return None
+    return data[0]["identifier"] if data else None
+
+
+# Friendly reciter names for the known recorded-translation editions, for the
+# on-screen credit line. Falls back to a generic label for anything else.
+AUDIO_EDITION_NAMES = {
+    "ur.khan": "Shamshad Ali Khan",
+    "en.walk": "Ibrahim Walk",
+}
+
+
 # -----------------------------------------------------------------------------
 # Free neural spoken translation — generated inside Streamlit, no backend/API key
 # -----------------------------------------------------------------------------
@@ -365,7 +391,6 @@ SACRED_ARABIC_TERMS = sorted(
         "ایمان",
         "کتاب",
         "آسمان",
-        "یا",
     ],
     key=len,
     reverse=True,
@@ -425,13 +450,23 @@ async def _synthesize_once(text: str, voice: str, rate: str, pitch: str) -> byte
     return data
 
 
-def _synthesize_with_fallback(text: str, voices: List[str], rate: str, pitch: str) -> bytes:
+def _synthesize_with_fallback(text: str, voices: List[str], rate: str, pitch: str, attempts_per_voice: int = 3) -> bytes:
+    # "No audio was received" from edge-tts is almost always a transient
+    # network/rate-limit hiccup, not a real problem with the text — it shows
+    # up more often now that a translation gets split into several separate
+    # synthesis calls per ayah (one per Urdu run, one per Arabic-origin term).
+    # Retrying the same voice a couple of times with a short backoff clears
+    # it in the large majority of cases, before ever falling back to a
+    # different voice or giving up.
     last_error: Optional[Exception] = None
     for voice in voices:
-        try:
-            return asyncio.run(_synthesize_once(text, voice, rate, pitch))
-        except Exception as exc:
-            last_error = exc
+        for attempt in range(attempts_per_voice):
+            try:
+                return asyncio.run(_synthesize_once(text, voice, rate, pitch))
+            except Exception as exc:
+                last_error = exc
+                if attempt < attempts_per_voice - 1:
+                    time.sleep(0.6 * (attempt + 1))
     raise RuntimeError(f"TTS failed for all configured voices: {last_error}")
 
 
@@ -559,9 +594,13 @@ else:
         arabic_ayahs = get_surah_data(surah_number, "ar.alafasy")
         translation_ayahs = None
         language = "none"
+        audio_edition = None
         if playback_choice != "Arabic only":
             language = "ur" if "Urdu" in playback_choice else "en"
-            edition = "ur.jalandhry" if language == "ur" else "en.sahih"
+            # Prefer a real, professionally-recorded translation recitation
+            # over synthesized speech whenever alquran.cloud has one.
+            audio_edition = find_audio_edition(language)
+            edition = audio_edition or ("ur.jalandhry" if language == "ur" else "en.sahih")
             translation_ayahs = get_surah_data(surah_number, edition)
     except Exception as exc:
         st.error("Surah audio/text load nahi ho saka.")
@@ -571,19 +610,25 @@ else:
     tracks = []
     for i, ayah in enumerate(arabic_ayahs):
         translation = ""
+        recorded_audio = ""
         if translation_ayahs and i < len(translation_ayahs):
             translation = translation_ayahs[i].get("text", "")
+            if audio_edition:
+                recorded_audio = translation_ayahs[i].get("audio", "") or ""
         tracks.append({
             "ayah": ayah.get("numberInSurah", i + 1),
             "arabic": ayah.get("text", ""),
             "arabic_audio": ayah.get("audio", ""),
             "translation": translation,
-            "translation_audio": "",
+            "translation_audio": recorded_audio,
         })
 
-    # Prepare translation audio only when the user explicitly chose spoken meaning.
-    # Cached per Ayah, so revisiting a Surah does not regenerate existing audio.
-    if language != "none":
+    # Only fall back to neural TTS when this language has no real recorded
+    # translation recitation on alquran.cloud. When a recording exists
+    # (audio_edition is set), every track already has its translation_audio
+    # filled in above from the API response — no synthesis, no wait, and no
+    # pronunciation guesswork, since it's an actual Qari reading the meaning.
+    if language != "none" and not audio_edition:
         progress = st.progress(0, text="Preparing spoken translation…")
         for i, track in enumerate(tracks):
             if track["translation"]:
@@ -596,6 +641,17 @@ else:
                     st.caption(f"Technical detail: {exc}")
             progress.progress((i + 1) / len(tracks), text=f"Preparing spoken translation • Ayah {i + 1}/{len(tracks)}")
         progress.empty()
+
+    if language == "none":
+        translation_note = "Arabic recitation only."
+    elif audio_edition:
+        reciter = AUDIO_EDITION_NAMES.get(audio_edition, "a professional reciter")
+        translation_note = f"Translation audio is a recorded recitation by {reciter}, not synthesized speech."
+    else:
+        translation_note = (
+            "No recorded translation reciter is available for this language, so the translation is "
+            "synthesized speech, with Arabic-origin sacred words read in a native Arabic voice."
+        )
 
     payload = json.dumps(tracks, ensure_ascii=False, separators=(",", ":"))
     language_json = json.dumps(language)
@@ -667,7 +723,7 @@ else:
           <button id="stop" class="secondary">■ Stop</button>
         </div>
         <div class="progress"><div class="bar" id="bar"></div></div>
-        <div class="note">The translation is a spoken meaning, not Quranic recitation. It is delivered in a calm male Urdu voice, with Arabic-origin sacred words read in a native Arabic voice for accurate pronunciation.</div>
+        <div class="note">{html.escape(translation_note)}</div>
         <div class="popup" id="popup"><span class="dot"></span><span id="popupText">Now playing</span></div>
       </div>
       <audio id="audio" preload="auto"></audio>
@@ -836,7 +892,16 @@ else:
 
     # Extra height prevents the floating pill from being clipped.
     components.html(player_html, height=415)
-    st.markdown(
-        '<div class="source">Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • Spoken meaning: free Edge neural TTS • Urdu voice, with sacred Arabic-origin terms voiced in Arabic.</div>',
-        unsafe_allow_html=True,
-    )
+    if language != "none" and audio_edition:
+        source_line = (
+            f"Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • "
+            f"Translation audio: {html.escape(AUDIO_EDITION_NAMES.get(audio_edition, audio_edition))} (recorded recitation)."
+        )
+    elif language != "none":
+        source_line = (
+            "Arabic recitation: Alafasy • Quran text & translation: alquran.cloud • "
+            "Translation audio: free Edge neural TTS, with sacred Arabic-origin terms voiced in Arabic."
+        )
+    else:
+        source_line = "Arabic recitation: Alafasy • Quran text: alquran.cloud."
+    st.markdown(f'<div class="source">{source_line}</div>', unsafe_allow_html=True)
