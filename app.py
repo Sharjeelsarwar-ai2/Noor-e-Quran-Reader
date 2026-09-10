@@ -746,7 +746,7 @@ else:
         <div class="note">{html.escape(translation_note)}</div>
         <div class="popup" id="popup"><span class="dot"></span><span id="popupText">Now playing</span></div>
       </div>
-      <audio id="audio" preload="auto" crossorigin="anonymous"></audio>
+      <audio id="audio" preload="auto"></audio>
       <script>
         const tracks = {payload};
         const language = {language_json};
@@ -761,27 +761,6 @@ else:
         const popupText = document.getElementById("popupText");
         let index = 0;
         let phase = "arabic";
-
-        // Native <audio>.volume caps at 100% of the source recording's own
-        // loudness, which isn't loud enough for some ayahs/translations.
-        // Route playback through a Web Audio gain node to amplify past that
-        // ceiling. This only works on same-origin or CORS-permitting audio;
-        // if the CDN doesn't send the right headers the browser will refuse
-        // to let Web Audio touch the stream, so this is wrapped so a failure
-        // just leaves plain, unboosted (but still working) playback.
-        try {{
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          const audioCtx = new AudioCtx();
-          const source = audioCtx.createMediaElementSource(audio);
-          const gainNode = audioCtx.createGain();
-          gainNode.gain.value = 1.8;
-          source.connect(gainNode).connect(audioCtx.destination);
-          document.getElementById("start").addEventListener("click", () => {{
-            if (audioCtx.state === "suspended") audioCtx.resume();
-          }}, {{ once: false }});
-        }} catch (e) {{
-          // Fall through silently — playback still works at normal volume.
-        }}
 
         let running = false;
         let completed = false;
