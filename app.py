@@ -767,6 +767,58 @@ else:
         let retryTimer = null;
         let lastSrc = "";
 
+        // --- Look-ahead prefetching -------------------------------------
+        // Real recorded translation audio streams from a remote CDN, unlike
+        // the old synthesized data: URLs which were already embedded with no
+        // network fetch needed. Without a head start, switching phase/ayah
+        // triggers a fresh fetch right at the moment of switching, which is
+        // exactly the delay noticed between Arabic and the translation.
+        // Warming the browser's HTTP cache for the next couple of tracks
+        // while the current one is still playing removes most of that gap.
+        const prefetched = new Set();
+        function prefetchUrl(url) {{
+          if (!url || prefetched.has(url)) return;
+          prefetched.add(url);
+          const warm = new Audio();
+          warm.preload = "auto";
+          warm.src = url;
+          try {{ warm.load(); }} catch (e) {{ /* ignore */ }}
+        }}
+        function prefetchAhead(i) {{
+          const t = tracks[i];
+          if (!t) return;
+          prefetchUrl(t.translation_audio);
+          const nextT = tracks[i + 1];
+          if (nextT) prefetchUrl(nextT.arabic_audio);
+        }}
+        // Warm the very first ayah immediately on load, before Start is even
+        // clicked, so the initial press has as little wait as possible too.
+        if (tracks.length) {{
+          prefetchUrl(tracks[0].arabic_audio);
+          prefetchAhead(0);
+        }}
+
+        // --- Auto-sizing iframe ------------------------------------------
+        // components.html renders this in a fixed-height iframe. A longer
+        // ayah wraps onto more lines and grows .shell taller, which was
+        // clipping the controls/buttons off the bottom since the iframe
+        // itself never grew to match. This is embedded via srcdoc (same
+        // top-level document), so window.frameElement is reachable and its
+        // height can be set directly to track the actual content size.
+        const shellEl = document.querySelector(".shell");
+        function resizeFrame() {{
+          try {{
+            if (window.frameElement) {{
+              window.frameElement.style.height = (shellEl.scrollHeight + 50) + "px";
+            }}
+          }} catch (e) {{ /* ignore */ }}
+        }}
+        if (window.ResizeObserver) {{
+          new ResizeObserver(resizeFrame).observe(shellEl);
+        }}
+        window.addEventListener("load", resizeFrame);
+        resizeFrame();
+
         function showPopup(text) {{
           popupText.textContent = text;
           popup.classList.add("show");
@@ -779,6 +831,7 @@ else:
           translation.textContent = track.translation || "";
           translation.classList.toggle("en", language === "en");
           counter.textContent = `Ayah ${{track.ayah}} / ${{tracks.length}}`;
+          resizeFrame();
         }}
 
         function updateProgress(extra) {{
@@ -820,6 +873,7 @@ else:
           updateUI(t); updateProgress(0);
           meta.textContent = language === "none" ? "Arabic recitation" : "Arabic recitation • spoken meaning follows";
           playSource(t.arabic_audio, `Ayah ${{t.ayah}} • Arabic recitation`, () => showPopup("Arabic audio could not load"));
+          prefetchAhead(index);
         }}
 
         function playTranslation() {{
@@ -912,7 +966,10 @@ else:
     </body></html>
     """
 
-    # Extra height prevents the floating pill from being clipped.
+    # 415 is just the initial paint before the in-page JS measures the real
+    # content and resizes the iframe itself (see resizeFrame() above) — it
+    # only matters for the brief instant before that first resize runs, since
+    # longer ayahs now grow the panel instead of clipping its buttons off.
     components.html(player_html, height=415)
     if language != "none" and audio_edition:
         source_line = (
