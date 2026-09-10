@@ -349,13 +349,16 @@ URDU_VOICE = "ur-PK-AsadNeural"
 URDU_VOICE_FALLBACK = "ur-IN-SalmanNeural"
 URDU_RATE = "-10%"
 URDU_PITCH = "-1Hz"
+URDU_VOLUME = "+35%"
 ARABIC_VOICE = "ar-SA-HamedNeural"
 ARABIC_VOICE_FALLBACK = "ar-EG-ShakirNeural"
 ARABIC_RATE = "-8%"
 ARABIC_PITCH = "-1Hz"
+ARABIC_VOLUME = "+35%"
 EN_VOICE = "en-US-GuyNeural"
 EN_RATE = "-8%"
 EN_PITCH = "-1Hz"
+EN_VOLUME = "+35%"
 
 # Arabic-origin sacred proper nouns / phrases, longest first so the regex
 # below prefers the fuller phrase (e.g. "اللہ تعالیٰ" over bare "اللہ").
@@ -438,8 +441,8 @@ def split_mixed_voice_segments(text: str) -> List[tuple]:
     return [(p, bool(_SACRED_PATTERN.fullmatch(p))) for p in parts]
 
 
-async def _synthesize_once(text: str, voice: str, rate: str, pitch: str) -> bytes:
-    communicate = edge_tts.Communicate(text, voice=voice, rate=rate, pitch=pitch)
+async def _synthesize_once(text: str, voice: str, rate: str, pitch: str, volume: str) -> bytes:
+    communicate = edge_tts.Communicate(text, voice=voice, rate=rate, pitch=pitch, volume=volume)
     buf = io.BytesIO()
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
@@ -450,7 +453,9 @@ async def _synthesize_once(text: str, voice: str, rate: str, pitch: str) -> byte
     return data
 
 
-def _synthesize_with_fallback(text: str, voices: List[str], rate: str, pitch: str, attempts_per_voice: int = 3) -> bytes:
+def _synthesize_with_fallback(
+    text: str, voices: List[str], rate: str, pitch: str, volume: str, attempts_per_voice: int = 3
+) -> bytes:
     # "No audio was received" from edge-tts is almost always a transient
     # network/rate-limit hiccup, not a real problem with the text — it shows
     # up more often now that a translation gets split into several separate
@@ -462,7 +467,7 @@ def _synthesize_with_fallback(text: str, voices: List[str], rate: str, pitch: st
     for voice in voices:
         for attempt in range(attempts_per_voice):
             try:
-                return asyncio.run(_synthesize_once(text, voice, rate, pitch))
+                return asyncio.run(_synthesize_once(text, voice, rate, pitch, volume))
             except Exception as exc:
                 last_error = exc
                 if attempt < attempts_per_voice - 1:
@@ -476,7 +481,7 @@ def synthesize_tts(text: str, language: str) -> bytes:
         return b""
 
     if language != "ur":
-        return _synthesize_with_fallback(text, [EN_VOICE], EN_RATE, EN_PITCH)
+        return _synthesize_with_fallback(text, [EN_VOICE], EN_RATE, EN_PITCH, EN_VOLUME)
 
     normalized = normalize_for_urdu_speech(text)
     audio_chunks = []
@@ -485,11 +490,15 @@ def synthesize_tts(text: str, language: str) -> bytes:
             continue
         if is_sacred:
             audio_chunks.append(
-                _synthesize_with_fallback(segment, [ARABIC_VOICE, ARABIC_VOICE_FALLBACK], ARABIC_RATE, ARABIC_PITCH)
+                _synthesize_with_fallback(
+                    segment, [ARABIC_VOICE, ARABIC_VOICE_FALLBACK], ARABIC_RATE, ARABIC_PITCH, ARABIC_VOLUME
+                )
             )
         else:
             audio_chunks.append(
-                _synthesize_with_fallback(segment, [URDU_VOICE, URDU_VOICE_FALLBACK], URDU_RATE, URDU_PITCH)
+                _synthesize_with_fallback(
+                    segment, [URDU_VOICE, URDU_VOICE_FALLBACK], URDU_RATE, URDU_PITCH, URDU_VOLUME
+                )
             )
     return b"".join(audio_chunks)
 
@@ -737,11 +746,12 @@ else:
         <div class="note">{html.escape(translation_note)}</div>
         <div class="popup" id="popup"><span class="dot"></span><span id="popupText">Now playing</span></div>
       </div>
-      <audio id="audio" preload="auto"></audio>
+      <audio id="audio" preload="auto" crossorigin="anonymous"></audio>
       <script>
         const tracks = {payload};
         const language = {language_json};
         const audio = document.getElementById("audio");
+        audio.volume = 1.0;
         const verse = document.getElementById("verse");
         const translation = document.getElementById("translation");
         const meta = document.getElementById("meta");
@@ -751,6 +761,28 @@ else:
         const popupText = document.getElementById("popupText");
         let index = 0;
         let phase = "arabic";
+
+        // Native <audio>.volume caps at 100% of the source recording's own
+        // loudness, which isn't loud enough for some ayahs/translations.
+        // Route playback through a Web Audio gain node to amplify past that
+        // ceiling. This only works on same-origin or CORS-permitting audio;
+        // if the CDN doesn't send the right headers the browser will refuse
+        // to let Web Audio touch the stream, so this is wrapped so a failure
+        // just leaves plain, unboosted (but still working) playback.
+        try {{
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          const audioCtx = new AudioCtx();
+          const source = audioCtx.createMediaElementSource(audio);
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = 1.8;
+          source.connect(gainNode).connect(audioCtx.destination);
+          document.getElementById("start").addEventListener("click", () => {{
+            if (audioCtx.state === "suspended") audioCtx.resume();
+          }}, {{ once: false }});
+        }} catch (e) {{
+          // Fall through silently — playback still works at normal volume.
+        }}
+
         let running = false;
         let completed = false;
         let retryTimer = null;
