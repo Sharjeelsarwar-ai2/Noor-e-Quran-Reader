@@ -592,16 +592,24 @@ else:
 
     try:
         arabic_ayahs = get_surah_data(surah_number, "ar.alafasy")
-        translation_ayahs = None
+        translation_text_ayahs = None
+        translation_audio_ayahs = None
         language = "none"
         audio_edition = None
         if playback_choice != "Arabic only":
             language = "ur" if "Urdu" in playback_choice else "en"
-            # Prefer a real, professionally-recorded translation recitation
-            # over synthesized speech whenever alquran.cloud has one.
+            # Translation TEXT always comes from a proper text edition. Audio
+            # editions on alquran.cloud return the Arabic verse text in their
+            # own "text" field (they're built as recitation audio, not a
+            # translation-text source) — using it directly showed Arabic
+            # under the Arabic instead of the Urdu/English meaning.
+            text_edition = "ur.jalandhry" if language == "ur" else "en.sahih"
+            translation_text_ayahs = get_surah_data(surah_number, text_edition)
+            # Translation AUDIO: prefer a real, professionally-recorded
+            # recitation over synthesized speech whenever alquran.cloud has one.
             audio_edition = find_audio_edition(language)
-            edition = audio_edition or ("ur.jalandhry" if language == "ur" else "en.sahih")
-            translation_ayahs = get_surah_data(surah_number, edition)
+            if audio_edition:
+                translation_audio_ayahs = get_surah_data(surah_number, audio_edition)
     except Exception as exc:
         st.error("Surah audio/text load nahi ho saka.")
         st.caption(f"Technical detail: {exc}")
@@ -611,10 +619,10 @@ else:
     for i, ayah in enumerate(arabic_ayahs):
         translation = ""
         recorded_audio = ""
-        if translation_ayahs and i < len(translation_ayahs):
-            translation = translation_ayahs[i].get("text", "")
-            if audio_edition:
-                recorded_audio = translation_ayahs[i].get("audio", "") or ""
+        if translation_text_ayahs and i < len(translation_text_ayahs):
+            translation = translation_text_ayahs[i].get("text", "")
+        if translation_audio_ayahs and i < len(translation_audio_ayahs):
+            recorded_audio = translation_audio_ayahs[i].get("audio", "") or ""
         tracks.append({
             "ayah": ayah.get("numberInSurah", i + 1),
             "arabic": ayah.get("text", ""),
@@ -623,30 +631,33 @@ else:
             "translation_audio": recorded_audio,
         })
 
-    # Only fall back to neural TTS when this language has no real recorded
-    # translation recitation on alquran.cloud. When a recording exists
-    # (audio_edition is set), every track already has its translation_audio
-    # filled in above from the API response — no synthesis, no wait, and no
-    # pronunciation guesswork, since it's an actual Qari reading the meaning.
-    if language != "none" and not audio_edition:
+    # Fall back to neural TTS only for ayahs that still have no translation
+    # audio (either this language has no recorded reciter at all, or the
+    # recorded edition is missing a specific ayah). Ayahs that already got a
+    # recorded URL above are left untouched — no synthesis, no wait, and no
+    # pronunciation guesswork, since that's an actual Qari reading the meaning.
+    missing = [t for t in tracks if t["translation"] and not t["translation_audio"]]
+    if language != "none" and missing:
         progress = st.progress(0, text="Preparing spoken translation…")
-        for i, track in enumerate(tracks):
-            if track["translation"]:
-                try:
-                    audio_bytes = synthesize_tts(track["translation"], language)
-                    track["translation_audio"] = audio_data_url(audio_bytes) if audio_bytes else ""
-                except Exception as exc:
-                    track["translation_audio"] = ""
-                    st.warning(f"Urdu/translation voice unavailable for Ayah {track['ayah']}. Arabic playback will continue.")
-                    st.caption(f"Technical detail: {exc}")
-            progress.progress((i + 1) / len(tracks), text=f"Preparing spoken translation • Ayah {i + 1}/{len(tracks)}")
+        for i, track in enumerate(missing):
+            try:
+                audio_bytes = synthesize_tts(track["translation"], language)
+                track["translation_audio"] = audio_data_url(audio_bytes) if audio_bytes else ""
+            except Exception as exc:
+                track["translation_audio"] = ""
+                st.warning(f"Urdu/translation voice unavailable for Ayah {track['ayah']}. Arabic playback will continue.")
+                st.caption(f"Technical detail: {exc}")
+            progress.progress((i + 1) / len(missing), text=f"Preparing spoken translation • Ayah {i + 1}/{len(missing)}")
         progress.empty()
 
     if language == "none":
         translation_note = "Arabic recitation only."
-    elif audio_edition:
+    elif audio_edition and not missing:
         reciter = AUDIO_EDITION_NAMES.get(audio_edition, "a professional reciter")
         translation_note = f"Translation audio is a recorded recitation by {reciter}, not synthesized speech."
+    elif audio_edition:
+        reciter = AUDIO_EDITION_NAMES.get(audio_edition, "a professional reciter")
+        translation_note = f"Translation audio is mostly a recorded recitation by {reciter}; a few ayahs use synthesized speech instead."
     else:
         translation_note = (
             "No recorded translation reciter is available for this language, so the translation is "
